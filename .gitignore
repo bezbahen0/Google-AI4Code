@@ -134,3 +134,4 @@ poetry.lock
 data/*
 
 .vscode
+.snakemake

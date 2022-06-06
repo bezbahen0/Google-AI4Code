@@ -1,0 +1,8 @@
+snakemake
+pandas
+matplotlib
+numpy
+fasttext
+tqdm
+pyarrow
+fastparquet
