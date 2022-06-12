@@ -9,3 +9,5 @@ pyarrow
 fastparquet
 sklearn
 pandarallel
+xgboost
+transformers

@@ -50,8 +50,9 @@ class Dataset:
         pass
 
     def _featurize_xgbranker(self):
-        data = self._load_data().head(10000)
+        data = self._load_data()
         tfidf = TfidfVectorizer(min_df=0.01)
+        self.logger.info("Fit tfidf vectorizer")
         X_train = tfidf.fit_transform(data["source"].astype(str))
 
         data = (
@@ -77,8 +78,8 @@ class Dataset:
                 ).reshape(-1, 1),
             )
         )
-        
-        with open(os.path.dirname(self.featurized_path), "wb") as vectorizer:
+
+        with open(os.path.join(os.path.dirname(self.featurized_path), 'tfidf.pkl'), "wb") as vectorizer:
             pickle.dump(tfidf, vectorizer, pickle.HIGHEST_PROTOCOL)
 
         with open(self.featurized_path, "wb") as featurized:
