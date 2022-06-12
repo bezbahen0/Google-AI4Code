@@ -1,4 +1,5 @@
 snakemake
+scipy
 pandas
 matplotlib
 numpy
@@ -6,3 +7,5 @@ fasttext
 tqdm
 pyarrow
 fastparquet
+sklearn
+pandarallel

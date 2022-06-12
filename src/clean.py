@@ -6,7 +6,9 @@ import yaml
 import argparse
 import pandas as pd
 
-from tqdm import tqdm
+from pandarallel import pandarallel
+
+pandarallel.initialize(progress_bar=True)
 
 def sub_html_tags(text):
     cleared_text = re.sub(r"<.*?>", "", text)
@@ -89,13 +91,11 @@ def main():
 
     # loading steps go here
     data = pd.read_parquet(args.data)
-
+    
     logger.info("Cleaning data")
 
     # cleaning steps go here
-    tqdm.pandas()
-    data[data.cell_type == "markdown"].source = data[data.cell_type == "markdown"].source.progress_apply(sub_all)
-    data.source.to_csv("data/clean/all_cell_cleaned.csv")
+    data.loc[data.cell_type == "markdown", 'source'] = data.loc[data.cell_type == "markdown", 'source'].parallel_apply(sub_all)
     logger.info(f"Saving cleaned data to {args.output}")
 
     # saving steps go here
