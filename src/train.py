@@ -22,9 +22,8 @@ def main():
 
     with open(args.data, "rb") as input_file:
         X_train, y_train, groups = pickle.load(input_file)
-
     model = XGBrankerModel()
-    model.model.fit(X_train, y_train, group=groups, verbose=True)
+    model.model.fit(X_train, y_train[:, 1], group=groups)
     model.model.save_model(args.output)
 
     

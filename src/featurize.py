@@ -79,8 +79,12 @@ class Dataset:
             )
         )
 
-        with open(os.path.join(os.path.dirname(self.featurized_path), 'tfidf.pkl'), "wb") as vectorizer:
-            pickle.dump(tfidf, vectorizer, pickle.HIGHEST_PROTOCOL)
+        with open(os.path.join(os.path.dirname(self.featurized_path), 'tfidf_vocabulary.pkl'), "wb") as file:
+            pickle.dump(tfidf.vocabulary_, file, 4)
+
+        with open(os.path.join(os.path.dirname(self.featurized_path), 'tfidf_idf.pkl'), "wb") as file:
+            pickle.dump(tfidf.idf_, file, 4)
+
 
         with open(self.featurized_path, "wb") as featurized:
             pickle.dump([X_train, y_train, groups], featurized, pickle.HIGHEST_PROTOCOL)

@@ -1,3 +1,4 @@
+import os
 from xgboost import XGBRanker
 
 from transformers import (
@@ -25,4 +26,6 @@ class XGBrankerModel:
             min_child_weight=10,
             subsample=0.5,
             tree_method="hist",
+            verbosity=2,
+            n_jobs=os.cpu_count()
         )

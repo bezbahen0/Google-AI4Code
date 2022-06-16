@@ -3,22 +3,25 @@ rule train_xgbranker:
     input:
         "data/featurized/xgb_data.pkl"
     output:
-        "data/models/xgbranker.pkl"
+        "data/models/xgbranker.ubj"
     shell:
         "python -m src.train --data {input} --output {output}"
+
 
 rule featurize_xgb_data:
     input:
         "data/clean/train_all_cleaned.parquet"
     output:
         "data/featurized/xgb_data.pkl"
+        "data/featurized/tfidf_vocabulary.pkl"
+        "data/featurized/tfidf_idf.pkl"
     shell:
-        "python -m src.featurize --data {input} --output {output} --task xgbranker"
+        "python -m src.featurize --data {input} --output {output[0]} --task xgbranker"
 
 
 rule clean_data:
     input:
-        "data/processed/train_all.parquet"
+        "data/merged/train_all.parquet"
     output:
         "data/clean/train_all_cleaned.parquet"
     shell:
@@ -31,6 +34,6 @@ rule join_data:
         "data/raw/train_ancestors.csv",
         "data/raw/train"
     output:
-        "data/processed/train_all.parquet"
+        "data/merged/train_all.parquet"
     shell:
-        "python -m src.processing --train_orders {input[0]} --train_ancestors {input[1]} --train {input[2]} --output {output}"
+        "python -m src.merging --train_orders {input[0]} --train_ancestors {input[1]} --train {input[2]} --output {output}"
