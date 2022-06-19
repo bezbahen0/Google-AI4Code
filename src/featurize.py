@@ -80,6 +80,7 @@ class Dataset:
         )
 
         with open(os.path.join(os.path.dirname(self.featurized_path), 'tfidf_vocabulary.pkl'), "wb") as file:
+            print(os.path.join(os.path.dirname(self.featurized_path), 'tfidf_vocabulary.pkl'))
             pickle.dump(tfidf.vocabulary_, file, 4)
 
         with open(os.path.join(os.path.dirname(self.featurized_path), 'tfidf_idf.pkl'), "wb") as file:

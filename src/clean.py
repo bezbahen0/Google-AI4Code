@@ -57,7 +57,7 @@ def preprocess_text(text):
     text = re.sub(r"^b\s+", "", text)
 
     # Converting to Lowercase
-    text = text.lower()
+    #text = text.lower() // the translation model is case-sensitive
 
     # remove digits
     text = re.sub(r"[0-9]+", "", text)
