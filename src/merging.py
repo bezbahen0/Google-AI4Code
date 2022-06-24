@@ -13,7 +13,7 @@ def read_notebook(glob_path):
     return (
         pd.read_json(glob_path, dtype={"cell_type": "category", "source": "str"})
         .assign(id=glob_path.stem)
-        .rename_axis("cell")
+        .rename_axis('cell')
     )
 
 
@@ -90,7 +90,7 @@ def merge_test(json_dir):
     json_dir = Path(json_dir)
     paths = list(json_dir.glob('*.json'))
     notebooks = [read_notebook(path) for path in tqdm(paths, desc="read notebooks")]
-    data = pd.concat(notebooks).reset_index(drop=True)
+    data = merge_notebooks(notebooks).reset_index()
     return data
 
 
