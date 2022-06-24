@@ -1,12 +1,13 @@
 import os
 
 import json
+import glob
 import argparse
 
 import pandas as pd
 
+from pathlib import Path
 from tqdm import tqdm
-from tqdm.contrib.concurrent import process_map
 
 
 def read_notebook(glob_path):
@@ -70,29 +71,45 @@ def get_example_df(train_path, example_id, train, ancestors):
     return example_df
 
 
+def merge_train(json_dir, orders_path, ancestors_path):
+    train = pd.read_csv(orders_path)
+    ancestors = pd.read_csv(ancestors_path)
+
+    all_ids = train["id"].unique()
+    data_gen = ((ids, train, ancestors) for ids in all_ids)
+
+    results = []
+    for arg in tqdm(
+        data_gen, desc="Merge data from .csv and .json", total=len(all_ids)
+    ):
+        results.append(get_example_df(json_dir, *arg).reset_index(drop=True))
+    data = pd.concat(results).reset_index(drop=True)
+    return data
+
+
+def merge_test(json_dir):
+    paths = glob.glob(json_dir + "/" + "*.json")
+    notebooks = [read_notebook(path) for path in tqdm(paths, desc="read notebooks")]
+    return merge_notebooks(notebooks)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--train_orders", type=str)
     parser.add_argument("--train_ancestors", type=str)
-    parser.add_argument("--train", type=str)
+    parser.add_argument("--mode", type=str)
+    parser.add_argument("--data", type=str)
     parser.add_argument("--output", type=str)
     args = parser.parse_args()
-
-    train = pd.read_csv(args.train_orders)
-    ancestors = pd.read_csv(args.train_ancestors)
-
     # Get the list of json files
-    train_jsons = os.listdir(args.train)
-    print(f"There are {len(train_jsons)} training json files")
+    notebooks_jsons = os.listdir(args.data)
+    print(f"There are {len(notebooks_jsons)} notebooks json files")
 
-    all_ids = train["id"].unique()
-    data_gen = ((ids, train, ancestors) for ids in all_ids[1:])
-  
-    results = []
-    for arg in tqdm(data_gen, desc="Merge data from .csv and .json", total=len(all_ids)):
-        results.append(get_example_df(args.train, *arg).reset_index(drop=True))
-        
-    all_results = pd.concat(results).reset_index(drop=True)
+    if args.mode == "train":
+        all_results = merge_train(args.data, args.train_orders, args.train_ancestors)
+    elif args.mode == "test":
+        all_results = merge_test(args.data)
+
     all_results.to_parquet(args.output)
 
 

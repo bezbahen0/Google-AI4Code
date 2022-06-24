@@ -1,15 +1,20 @@
 import os
 
 import fasttext
+import torch
 from xgboost import XGBRanker
 
 from transformers import (
     AutoModel,
     AutoModelForSeq2SeqLM,
     AutoTokenizer,
+    MarianTokenizer,
+    MarianMTModel,
     AdamW,
     get_linear_schedule_with_warmup,
 )
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 class TransformersModel:
@@ -24,16 +29,41 @@ class TransformersModel:
         self.tokenzier = AutoTokenizer.from_pretrained(model_path)
 
 
-class TranslationModel:
-    def __init__(self, model_path):
-        self.tokenizer = AutoTokenizer.from_pretrained(model_path)
-        self.model = AutoModelForSeq2SeqLM.from_pretrained(model_path)
+class HelsinkiTranslationModel:
+    def __init__(self, model_path, max_length=512):
+        self.tokenizer = MarianTokenizer.from_pretrained(model_path)
+        self.model = MarianMTModel.from_pretrained(model_path).to(device)
+        self.max_length = max_length
 
-    def translate(self, text):
-        encoded_zh = self.tokenizer(text, return_tensors="pt")
-        generated_tokens = self.model.generate(**encoded_zh)
+    def predict(self, text):
+        encoded = self.tokenizer(text, return_tensors="pt", max_length=self.max_length).to(device)
+        generated_tokens = self.model.generate(**encoded)
         result = self.tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)
-        return result
+        return result[0]
+
+    def predict_large_text(self, text):
+        if len(text.split()) > self.max_length:
+            return self.predict(text)
+
+        translated_chunks = []
+        for text_chunk in self._split(text):
+            translated_chunks.append(self.predict(text_chunk))
+        
+        return " ".join(translated_chunks)
+
+    def translate(self, list_text):
+        translation_list = []
+        for tr in list_text:
+            translation_list.append(self.predict_large_text(tr))
+        return translation_list
+
+    def supported_lang(self):
+        return self.tokenizer.source_lang 
+    
+    def _split(self, text):
+        splited_text = text.split()
+        for i in range(0, len(splited_text), self.max_length):
+            yield " ".join(splited_text[i:i + self.max_length])
 
 
 class LanguageIdentification:
@@ -75,10 +105,11 @@ if __name__ == "__main__":
        'bs', 'ur', 'ne', 'qu', 'be', 'fy', 'jb', 'ta', 'sq', 'ky', 'af', 'mk',
        'ia']
     """
-    model = TranslationModel("Helsinki-NLP/opus-mt-zh-en")
-    ru_text = [
-        # "Ne vous mêlez pas des affaires des sorciers, car ils sont insidieux et prompts à la colère."
-        "不要插手巫師的事務, 因為他們是微妙的, 很快就會發怒."
+    model = HelsinkiTranslationModel("Helsinki-NLP/opus-mt-ine-en")
+    text = [
+        "Ne vous mêlez pas des affaires des sorciers, car ils sont insidieux et prompts à la colère.",
+        "不要插手巫師的事務, 因為他們是微妙的, 很快就會發怒.",
     ]
-    result = model.translate(ru_text)
+    result = model.translate(text)
     print(result)
+    print(model.supported_lang())

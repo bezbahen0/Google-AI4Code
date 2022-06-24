@@ -11,48 +11,47 @@ from scipy import sparse
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 
-class Dataset:
-    def __init__(self, data_path, featurized_path, task, logger, max_len=128):
+class Featurizer:
+    def __init__(self, data_path, featurizd_path, logger, max_len=128):
         self.data_path = data_path
         self.featurized_path = featurized_path
-        self.task = task
         self.logger = logger
-        if task == "transformers":
-            self.max_len = max_len
-            self.tokenizer_vectorizer = lambda text: models(
-                text,
-                None,
-                add_special_tokens=True,
-                max_length=self.max_len,
-                padding="max_length",
-                return_token_type_ids=True,
-                truncation=True,
-            )
 
-    def prepare_for_training(self):
-        """
-        Prepares the dataset for training
-        """
+    def featurize(self, mode="test"):
+        pass
 
-        if self.task == "transformers":
-            self._featureize_transformers()
-        if self.task == "xgbranker":
-            self._featurize_xgbranker()
+    def _featureize_train(self):
+        pass
 
-        self.logger.info(f"Saving featurized data to {self.featurized_path}")
+    def _featureize_test(self):
+        pass
 
     def _load_data(self):
         self.logger.info(f"Loading clean data from {self.data_path}")
         return pd.read_parquet(self.data_path)
 
-    def _featureize_transformers(self):
-        data = self._load_data()
-        pass
 
-    def _featurize_xgbranker(self):
+class XGBrankerFeaturizer(Featurizer):
+    def __init__(self, data_path, featurizd_path, logger, max_len=128):
+        super().__init__(data_path, featurizd_path, logger, max_len)
+        self.tfidf_idf_path = os.path.join(
+            os.path.dirname(self.featurized_path), "tfidf_idf.pkl"
+        )
+        self.tfidf_voc_path = os.path.join(
+            os.path.dirname(self.featurized_path), "tfidf_voc.pkl"
+        )
+
+    def featurize(self, mode="test"):
+        if mode is "train":
+            _featureize_train()
+        if mode is "test":
+            _featureize_test()
+
+    def _featureize_train(self):
         data = self._load_data()
-        tfidf = TfidfVectorizer(min_df=0.01)
+
         self.logger.info("Fit tfidf vectorizer")
+        tfidf = TfidfVectorizer(min_df=0.01)
         X_train = tfidf.fit_transform(data["source"].astype(str))
 
         data = (
@@ -69,26 +68,42 @@ class Dataset:
 
         # Add code cell ordering
         X_train = sparse.hstack(
-            (
-                X_train,
-                np.where(
-                    data["cell_type"] == "code",
-                    data.groupby(["id", "cell_type"]).cumcount().to_numpy() + 1,
-                    0,
-                ).reshape(-1, 1),
-            )
+            X_train,
+            np.where(
+                data["cell_type"] == "code",
+                data.groupby(["id", "cell_type"]).cumcount().to_numpy() + 1,
+                0,
+            ).reshape(-1, 1),
         )
 
-        with open(os.path.join(os.path.dirname(self.featurized_path), 'tfidf_vocabulary.pkl'), "wb") as file:
-            print(os.path.join(os.path.dirname(self.featurized_path), 'tfidf_vocabulary.pkl'))
+        with open(self.tfidf_voc_path, "wb") as file:
             pickle.dump(tfidf.vocabulary_, file, 4)
 
-        with open(os.path.join(os.path.dirname(self.featurized_path), 'tfidf_idf.pkl'), "wb") as file:
+        with open(self.tfidf_idf_path, "wb") as file:
             pickle.dump(tfidf.idf_, file, 4)
-
 
         with open(self.featurized_path, "wb") as featurized:
             pickle.dump([X_train, y_train, groups], featurized, pickle.HIGHEST_PROTOCOL)
+
+        self.logger.info(f"Save featurized train data to {self.featurized_path}")
+
+    def _featureize_test(self):
+        pass
+
+
+class TransformersFeaturizer(Featurizer):
+    def __init__(self, data_path, featurized_path, logger, max_len=128):
+        super().__init__(data_path, featurizd_path, logger, max_len)
+      
+    def featurize(self, mode="test"):
+        pass
+
+    def _featureize_train(self):
+        pass
+
+    def _featureize_test(self):
+        pass
+
 
 
 def main():
@@ -101,13 +116,18 @@ def main():
     parser.add_argument("--data", type=str)
     parser.add_argument("--output", type=str)
     parser.add_argument("--task", type=str)
+    parser.add_argument("--mode", type=str)
     args = parser.parse_args()
 
     logger = logging.getLogger(__name__)
     logger.info("--FEATURIZE--")
 
-    dataset = Dataset(args.data, args.output, args.task, logger)
-    dataset.prepare_for_training()
+    if args.task == "xgbranker":
+        dataset = XGBrankerFeaturizer(args.data, args.output, logger)
+    if args.task == "transformers":
+        dataset = TransformersFeaturizer(args.data, args.output, logger)
+        
+    dataset.featurize(mode=args.mode)
 
 
 if __name__ == "__main__":

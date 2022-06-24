@@ -14,7 +14,7 @@ rule featurize_xgb_data:
         "data/translated/train_all_translated.parquet"
     output:
         "data/featurized/xgb_data.pkl",
-        "data/featurized/tfidf_vocabulary.pkl",
+        "data/featurized/tfidf_voc.pkl",
         "data/featurized/tfidf_idf.pkl"
     shell:
         "python -m src.featurize --data {input} --output {output[0]} --task xgbranker"
@@ -29,9 +29,13 @@ rule translate_markdowns_cells:
         "data/translated/languages.csv"
     shell:
         '''
-        python -m src.translation --data {input[0]} --lang_ident_out {output[1]} \
-            --translation_out {output[0]} --target_lang en --fasttext_ident_path {input[1]} \
-            --translation_model_path Helsinki-NLP/opus-mt-ine-en
+        python -m src.translation \
+            --data {input[0]}  \
+            --translation_out {output[0]} \
+            --lang_ident_out {output[1]} \
+            --fasttext_ident_path {input[1]} \
+            --target_lang en \
+            --helsinki_model_group ine
         '''
 
 
@@ -53,6 +57,10 @@ rule join_data:
         "data/merged/train_all.parquet"
     shell:
         '''
-        python -m src.merging --train_orders {input[0]} \
-            --train_ancestors {input[1]} --train {input[2]} --output {output}
+        python -m src.merging  \
+            --train_orders {input[0]} \
+            --train_ancestors {input[1]}  \
+            --mode train \
+            --data {input[2]} \
+            --output {output} 
         '''
