@@ -90,17 +90,19 @@ class XGBrankerFeaturizer(Featurizer):
             pickle.dump([X_train, y_train, groups], featurized, pickle.HIGHEST_PROTOCOL)
 
     def _featureize_test(self):
+        data = self._load_data()
+
         tfidf = TfidfVectorizer(min_df=0.01)
         tfidf.idf_ = pickle.load(open(self.tfidf_idf_path, "rb"))
         tfidf.vocabulary_ = pickle.load(open(self.tfidf_voc_path, "rb"))
 
-        X_test = tfidf.transform(df_test["source"].astype(str))
+        X_test = tfidf.transform(data["source"].astype(str))
         X_test = sparse.hstack(
             (
                 X_test,
                 np.where(
-                    df_test["cell_type"] == "code",
-                    df_test.groupby(["id", "cell_type"]).cumcount().to_numpy() + 1,
+                    data["cell_type"] == "code",
+                    data.groupby(["id", "cell_type"]).cumcount().to_numpy() + 1,
                     0,
                 ).reshape(-1, 1),
             )
