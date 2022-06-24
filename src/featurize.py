@@ -47,6 +47,8 @@ class XGBrankerFeaturizer(Featurizer):
         if mode == "test":
             self._featureize_test()
 
+        self.logger.info(f"Save featurized train data to {self.featurized_path}")
+
     def _featureize_train(self):
         data = self._load_data()
 
@@ -87,10 +89,24 @@ class XGBrankerFeaturizer(Featurizer):
         with open(self.featurized_path, "wb") as featurized:
             pickle.dump([X_train, y_train, groups], featurized, pickle.HIGHEST_PROTOCOL)
 
-        self.logger.info(f"Save featurized train data to {self.featurized_path}")
-
     def _featureize_test(self):
-        pass
+        tfidf = TfidfVectorizer(min_df=0.01)
+        tfidf.idf_ = pickle.load(open(self.tfidf_idf_path, "rb"))
+        tfidf.vocabulary_ = pickle.load(open(self.tfidf_voc_path, "rb"))
+
+        X_test = tfidf.transform(df_test["source"].astype(str))
+        X_test = sparse.hstack(
+            (
+                X_test,
+                np.where(
+                    df_test["cell_type"] == "code",
+                    df_test.groupby(["id", "cell_type"]).cumcount().to_numpy() + 1,
+                    0,
+                ).reshape(-1, 1),
+            )
+        )
+        with open(self.featurized_path, "wb") as featurized:
+            pickle.dump(X_test, featurized, pickle.HIGHEST_PROTOCOL)
 
 
 class TransformersFeaturizer(Featurizer):
