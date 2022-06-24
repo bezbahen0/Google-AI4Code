@@ -12,7 +12,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 
 
 class Featurizer:
-    def __init__(self, data_path, featurizd_path, logger, max_len=128):
+    def __init__(self, data_path, featurized_path, logger, max_len=128):
         self.data_path = data_path
         self.featurized_path = featurized_path
         self.logger = logger
@@ -32,8 +32,8 @@ class Featurizer:
 
 
 class XGBrankerFeaturizer(Featurizer):
-    def __init__(self, data_path, featurizd_path, logger, max_len=128):
-        super().__init__(data_path, featurizd_path, logger, max_len)
+    def __init__(self, data_path, featurized_path, logger, max_len=128):
+        super().__init__(data_path, featurized_path, logger, max_len)
         self.tfidf_idf_path = os.path.join(
             os.path.dirname(self.featurized_path), "tfidf_idf.pkl"
         )
@@ -42,10 +42,10 @@ class XGBrankerFeaturizer(Featurizer):
         )
 
     def featurize(self, mode="test"):
-        if mode is "train":
-            _featureize_train()
-        if mode is "test":
-            _featureize_test()
+        if mode == "train":
+            self._featureize_train()
+        if mode == "test":
+            self._featureize_test()
 
     def _featureize_train(self):
         data = self._load_data()
@@ -68,12 +68,14 @@ class XGBrankerFeaturizer(Featurizer):
 
         # Add code cell ordering
         X_train = sparse.hstack(
-            X_train,
-            np.where(
-                data["cell_type"] == "code",
-                data.groupby(["id", "cell_type"]).cumcount().to_numpy() + 1,
-                0,
-            ).reshape(-1, 1),
+            (
+                X_train,
+                np.where(
+                    data["cell_type"] == "code",
+                    data.groupby(["id", "cell_type"]).cumcount().to_numpy() + 1,
+                    0,
+                ).reshape(-1, 1),
+            )
         )
 
         with open(self.tfidf_voc_path, "wb") as file:
@@ -93,8 +95,8 @@ class XGBrankerFeaturizer(Featurizer):
 
 class TransformersFeaturizer(Featurizer):
     def __init__(self, data_path, featurized_path, logger, max_len=128):
-        super().__init__(data_path, featurizd_path, logger, max_len)
-      
+        super().__init__(data_path, featurized_path, logger, max_len)
+
     def featurize(self, mode="test"):
         pass
 
@@ -103,7 +105,6 @@ class TransformersFeaturizer(Featurizer):
 
     def _featureize_test(self):
         pass
-
 
 
 def main():
@@ -126,7 +127,7 @@ def main():
         dataset = XGBrankerFeaturizer(args.data, args.output, logger)
     if args.task == "transformers":
         dataset = TransformersFeaturizer(args.data, args.output, logger)
-        
+
     dataset.featurize(mode=args.mode)
 
 

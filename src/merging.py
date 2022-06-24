@@ -1,7 +1,6 @@
 import os
 
 import json
-import glob
 import argparse
 
 import pandas as pd
@@ -88,7 +87,8 @@ def merge_train(json_dir, orders_path, ancestors_path):
 
 
 def merge_test(json_dir):
-    paths = glob.glob(json_dir + "/" + "*.json")
+    json_dir = Path(json_dir)
+    paths = list(json_dir.glob('*.json'))
     notebooks = [read_notebook(path) for path in tqdm(paths, desc="read notebooks")]
     return merge_notebooks(notebooks)
 

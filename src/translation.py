@@ -35,7 +35,7 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=str)
-    parser.add_argument("--translation_out", type=str)
+    parser.add_argument("--output", type=str)
     parser.add_argument("--lang_ident_out", type=str)
     parser.add_argument("--target_lang", type=str)
     parser.add_argument("--fasttext_ident_path", type=str)
@@ -56,6 +56,7 @@ def main():
     logger.info(
         f"Start predict languages for {len(markdowns_data.id.unique())} notebooks"
     )
+
     languages_df = get_notebooks_lang(
         markdowns_data,
         args.fasttext_ident_path,
@@ -78,18 +79,19 @@ def main():
         f"Try translate {len(need_translate_ids)} notebooks to {args.target_lang}"
     )
 
-    to_translate = data.loc[data["id"].isin(need_translate_ids)]   
+    to_translate = data.loc[data["id"].isin(need_translate_ids)]
 
     to_translate.loc[data.cell_type == "markdown", "source"] = to_translate.loc[
         data.cell_type == "markdown", "source"
     ].progress_apply(translation_model.predict_large_text)
 
-    # data.loc[data.cell_type == "markdown", 'source'] = data.loc[data.cell_type == "markdown", 'source'].parallel_apply(sub_all)
-
-    logger.info(f"Saving translated data to {args.translation_out}")
+    data = data.drop(to_translate.index)
+    data = pd.concat([data, to_translate])
+   
+    logger.info(f"Saving translated data to {args.output}")
 
     # saving steps go here
-    to_translate.to_parquet(args.translation_out)
+    data.to_parquet(args.output)
     # data.to_parquet(args.output)
 
 

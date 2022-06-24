@@ -31,7 +31,7 @@ rule translate_markdowns_cells:
         '''
         python -m src.translation \
             --data {input[0]}  \
-            --translation_out {output[0]} \
+            --output {output[0]} \
             --lang_ident_out {output[1]} \
             --fasttext_ident_path {input[1]} \
             --target_lang en \
