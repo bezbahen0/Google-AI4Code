@@ -17,7 +17,7 @@ rule featurize_xgb_data:
         "data/featurized/tfidf_voc.pkl",
         "data/featurized/tfidf_idf.pkl"
     shell:
-        "python -m src.featurize --data {input} --output {output[0]} --task xgbranker"
+        "python -m src.featurize --data {input} --output {output[0]} --task xgbranker --mode train"
 
 
 rule translate_markdowns_cells:
