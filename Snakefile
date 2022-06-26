@@ -35,7 +35,8 @@ rule translate_markdowns_cells:
             --lang_ident_out {output[1]} \
             --fasttext_ident_path {input[1]} \
             --target_lang en \
-            --helsinki_model_group ine
+            --helsinki_model_group ine \
+            --batch_size 32
         '''
 
 

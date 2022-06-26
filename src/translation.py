@@ -83,13 +83,10 @@ def main():
 
     to_translate = data.loc[data["id"].isin(need_translate_ids)]
 
-    # to_translate.loc[to_translate.cell_type == "markdown", "source"] = to_translate.loc[
-    #    to_translate.cell_type == "markdown", "source"
-    # ].progress_apply(translation_model.predict_large_text)
-
     # Slice dataframe to batch and predict as batch
     translated = []
     num_slices = len(to_translate) // args.batch_size
+    num_slices = 1 if num_slices == 0 else num_slices
     for df in tqdm(np.array_split(to_translate, num_slices), desc="Translate"):
         df.loc[df.cell_type == "markdown", "source"] = translation_model.predict_batch(
             df.loc[df.cell_type == "markdown", "source"].to_list()
@@ -97,8 +94,6 @@ def main():
         translated.append(df)
 
     translated = pd.concat(translated)
-    print(translated)
-    print(to_translate)
     data = data.drop(translated.index)
     data = pd.concat([data, translated])
 
@@ -106,8 +101,7 @@ def main():
 
     # saving steps go here
     data.to_parquet(args.output)
-    # data.to_parquet(args.output)
-
+   
 
 if __name__ == "__main__":
     log_fmt = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
