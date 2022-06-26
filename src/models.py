@@ -36,19 +36,37 @@ class HelsinkiTranslationModel:
         self.max_length = max_length
 
     def predict(self, text):
-        encoded = self.tokenizer(text, return_tensors="pt", max_length=self.max_length).to(device)
+        encoded = self.tokenizer(
+            text, return_tensors="pt", truncation=True, max_length=self.max_length
+        )
+        encoded = encoded.to(device)
+
         generated_tokens = self.model.generate(**encoded)
         result = self.tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)
         return result[0]
+
+    def predict_batch(self, list_text):
+        if not list_text:
+            return list_text
+
+        encoded_batch = self.tokenizer.batch_encode_plus(
+            list_text, return_tensors="pt", padding=True, truncation=True, max_length=self.max_length
+        )
+        encoded_batch = encoded_batch.to(device)
+
+        generated_tokens = self.model.generate(**encoded_batch)
+        result = self.tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)
+        return result
 
     def predict_large_text(self, text):
         if len(text.split()) > self.max_length:
             return self.predict(text)
 
-        translated_chunks = []
+        chunks = []
         for text_chunk in self._split(text):
-            translated_chunks.append(self.predict(text_chunk))
-        
+            chunks.append(text_chunk)
+
+        translated_chunks = self.predict_batch(chunks)
         return " ".join(translated_chunks)
 
     def translate(self, list_text):
@@ -58,12 +76,12 @@ class HelsinkiTranslationModel:
         return translation_list
 
     def supported_lang(self):
-        return self.tokenizer.source_lang 
-    
+        return self.tokenizer.source_lang
+
     def _split(self, text):
         splited_text = text.split()
         for i in range(0, len(splited_text), self.max_length):
-            yield " ".join(splited_text[i:i + self.max_length])
+            yield " ".join(splited_text[i : i + self.max_length])
 
 
 class LanguageIdentification:

@@ -4,6 +4,7 @@ import re
 import logging
 import argparse
 import pandas as pd
+import numpy as np
 
 from tqdm import tqdm
 from .models import HelsinkiTranslationModel, LanguageIdentification
@@ -41,6 +42,7 @@ def main():
     parser.add_argument("--fasttext_ident_path", type=str)
     parser.add_argument("--helsinki_model_path", type=str)
     parser.add_argument("--helsinki_model_group", type=str)
+    parser.add_argument("--batch_size", type=int, default=1)
     args = parser.parse_args()
 
     logger = logging.getLogger(__name__)
@@ -81,13 +83,25 @@ def main():
 
     to_translate = data.loc[data["id"].isin(need_translate_ids)]
 
-    to_translate.loc[data.cell_type == "markdown", "source"] = to_translate.loc[
-        data.cell_type == "markdown", "source"
-    ].progress_apply(translation_model.predict_large_text)
+    # to_translate.loc[to_translate.cell_type == "markdown", "source"] = to_translate.loc[
+    #    to_translate.cell_type == "markdown", "source"
+    # ].progress_apply(translation_model.predict_large_text)
 
-    data = data.drop(to_translate.index)
-    data = pd.concat([data, to_translate])
-   
+    # Slice dataframe to batch and predict as batch
+    translated = []
+    num_slices = len(to_translate) // args.batch_size
+    for df in tqdm(np.array_split(to_translate, num_slices), desc="Translate"):
+        df.loc[df.cell_type == "markdown", "source"] = translation_model.predict_batch(
+            df.loc[df.cell_type == "markdown", "source"].to_list()
+        )
+        translated.append(df)
+
+    translated = pd.concat(translated)
+    print(translated)
+    print(to_translate)
+    data = data.drop(translated.index)
+    data = pd.concat([data, translated])
+
     logger.info(f"Saving translated data to {args.output}")
 
     # saving steps go here
