@@ -1,11 +1,11 @@
 
-#rule train_xgbranker:
-#    input:
-#        "data/featurized/xgb_data.pkl"
-#    output:
-#        "data/models/xgbranker.ubj"
-#    shell:
-#        "python -m src.train --data {input} --output {output}"
+rule train_xgbranker:
+    input:
+        "data/featurized/xgb_data.pkl"
+    output:
+        "data/models/xgbranker.ubj"
+    shell:
+        "python -m src.train --data {input} --output {output}"
 
 
 rule featurize_xgb_data:
@@ -23,7 +23,9 @@ rule featurize_xgb_data:
 rule translate_markdowns_cells:
     input:
        "data/clean/train_all_cleaned.parquet",
-       "data/pretrained_models/lid.176.bin"
+       "data/pretrained_models/lid.176.bin",
+       "data/pretrained_models/converted",
+       "data/pretrained_models/transformers"
     output:
         "data/translated/train_all_translated.parquet",
         "data/translated/languages.csv"
@@ -35,8 +37,9 @@ rule translate_markdowns_cells:
             --lang_ident_out {output[1]} \
             --fasttext_ident_path {input[1]} \
             --target_lang en \
-            --helsinki_model_group ine \
-            --batch_size 32
+            --marianmt_models_dir_path {input[2]}\
+            --tokenizers_dir_path {input[3]} \
+            --batch_size 128
         '''
 
 

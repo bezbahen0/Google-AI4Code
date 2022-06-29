@@ -4,12 +4,11 @@ import fasttext
 import torch
 from xgboost import XGBRanker
 
+import ctranslate2
 from transformers import (
     AutoModel,
     AutoModelForSeq2SeqLM,
     AutoTokenizer,
-    MarianTokenizer,
-    MarianMTModel,
     AdamW,
     get_linear_schedule_with_warmup,
 )
@@ -29,59 +28,44 @@ class TransformersModel:
         self.tokenzier = AutoTokenizer.from_pretrained(model_path)
 
 
-class HelsinkiTranslationModel:
-    def __init__(self, model_path, max_length=512):
-        self.tokenizer = MarianTokenizer.from_pretrained(model_path)
-        self.model = MarianMTModel.from_pretrained(model_path).to(device)
+class MarianMTModel:
+    def __init__(self, model_path, tokenizer_path, max_length=512):
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
+        self.model = ctranslate2.Translator(model_path, device=device)
         self.max_length = max_length
 
     def predict(self, text):
-        encoded = self.tokenizer(
-            text, return_tensors="pt", truncation=True, max_length=self.max_length
+        source = self.tokenizer.convert_ids_to_tokens(
+            self.tokenizer.encode(
+                text, padding=True, truncation=True, max_length=self.max_length
+            )
         )
-        encoded = encoded.to(device)
+        results = self.model.translate_batch([source])
+        results = results[0].hypotheses[0]
 
-        generated_tokens = self.model.generate(**encoded)
-        result = self.tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)
-        return result[0]
+        results = self.tokenizer.decode(self.tokenizer.convert_tokens_to_ids(results))
+        return results
 
     def predict_batch(self, list_text):
         if not list_text:
             return list_text
 
-        encoded_batch = self.tokenizer.batch_encode_plus(
-            list_text, return_tensors="pt", padding=True, truncation=True, max_length=self.max_length
+        tokenized_batch = self.tokenizer.batch_encode_plus(
+            list_text, padding=True, truncation=True, max_length=self.max_length
         )
-        encoded_batch = encoded_batch.to(device)
+        source = list(
+            map(self.tokenizer.convert_ids_to_tokens, tokenized_batch.input_ids)
+        )
+        results = self.model.translate_batch(source)
+        results = self.tokenizer.batch_decode(
+            [
+                self.tokenizer.convert_tokens_to_ids(res.hypotheses[0])
+                for res in results
+            ],
+            skip_special_tokens=True,
+        )
 
-        generated_tokens = self.model.generate(**encoded_batch)
-        result = self.tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)
-        return result
-
-    def predict_large_text(self, text):
-        if len(text.split()) > self.max_length:
-            return self.predict(text)
-
-        chunks = []
-        for text_chunk in self._split(text):
-            chunks.append(text_chunk)
-
-        translated_chunks = self.predict_batch(chunks)
-        return " ".join(translated_chunks)
-
-    def translate(self, list_text):
-        translation_list = []
-        for tr in list_text:
-            translation_list.append(self.predict_large_text(tr))
-        return translation_list
-
-    def supported_lang(self):
-        return self.tokenizer.source_lang
-
-    def _split(self, text):
-        splited_text = text.split()
-        for i in range(0, len(splited_text), self.max_length):
-            yield " ".join(splited_text[i : i + self.max_length])
+        return results
 
 
 class LanguageIdentification:
@@ -106,14 +90,6 @@ class XGBrankerModel:
 
 if __name__ == "__main__":
     """
-    Helsinki-NLP/opus-mt-ine-en support source languages:
-        ['ca', 'es', 'os', 'ro', 'fy', 'cy', 'sc', 'is', 'yi', 'lb', 'an',
-         'sq', 'fr', 'ht', 'rm', 'ps', 'af', 'uk', 'sl', 'lt', 'bg', 'be',
-         'gd', 'si', 'en', 'br', 'mk', 'or', 'mr', 'ru', 'fo', 'co', 'oc',
-         'pl', 'gl', 'nb', 'bn', 'id', 'hy', 'da', 'gv', 'nl', 'pt', 'hi',
-         'as', 'kw', 'ga', 'sv', 'gu', 'wa', 'lv', 'el', 'it', 'hr', 'ur',
-         'nn', 'de', 'cs', 'ine']
-
     haved languages
     ['en', 'pt', 'ko', 'ja', 'ru', 'tr', 'es', 'zh', 'fr', 'id', 'vi', 'de',
        'it', 'th', 'pl', 'ca', 'uk', 'nl', 'fa', 'mn', 'hu', 'ar', 'da', 'cs',
@@ -123,11 +99,24 @@ if __name__ == "__main__":
        'bs', 'ur', 'ne', 'qu', 'be', 'fy', 'jb', 'ta', 'sq', 'ky', 'af', 'mk',
        'ia']
     """
-    model = HelsinkiTranslationModel("Helsinki-NLP/opus-mt-ine-en")
+    translator = ctranslate2.Translator(
+        "data/pretrained_models/opus-mt-zh-en-converted", device="cuda"
+    )
+    tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-zh-en")
+
     text = [
-        "Ne vous mêlez pas des affaires des sorciers, car ils sont insidieux et prompts à la colère.",
+        "不要插手巫師的事務, 因為他們是微妙的, 很快就會發怒 很快就會發怒.",
+        "不要插手巫師的事務, 因為他們是微妙的, 很快就會發怒.",
         "不要插手巫師的事務, 因為他們是微妙的, 很快就會發怒.",
     ]
-    result = model.translate(text)
-    print(result)
-    print(model.supported_lang())
+    # text = "Ne vous mêlez pas des affaires des sorciers, car ils sont insidieux et prompts à la colère."
+    tokenized_batch = tokenizer.batch_encode_plus(text)
+    source = list(map(tokenizer.convert_ids_to_tokens, tokenized_batch.input_ids))
+    results = translator.translate_batch(source)
+    print(
+        tokenizer.batch_decode(
+            [tokenizer.convert_tokens_to_ids(res.hypotheses[0]) for res in results],
+            # list(map(tokenizer.convert_tokens_to_ids, results.hypotheses[0])),
+            skip_special_tokens=True,
+        )
+    )
