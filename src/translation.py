@@ -74,6 +74,9 @@ def main():
     languages, models_names = get_supported_languages(
         os.listdir(args.marianmt_models_dir_path)
     )
+    if len(languages_df[languages_df != args.target_lang].index) == 0:
+        logger.info(f"No notebooks found != {args.target_lang}, abort")
+        return
 
     for language, model_name in zip(languages, models_names):
         model_path = os.path.join(args.marianmt_models_dir_path, model_name)

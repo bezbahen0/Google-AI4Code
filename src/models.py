@@ -35,11 +35,8 @@ class MarianMTModel:
         self.max_length = max_length
 
     def predict(self, text):
-        source = self.tokenizer.convert_ids_to_tokens(
-            self.tokenizer.encode(
-                text, padding=True, truncation=True, max_length=self.max_length
-            )
-        )
+        text = text[:max_length]
+        source = self.tokenizer.convert_ids_to_tokens(self.tokenizer.encode(text))
         results = self.model.translate_batch([source])
         results = results[0].hypotheses[0]
 
@@ -50,9 +47,8 @@ class MarianMTModel:
         if not list_text:
             return list_text
 
-        tokenized_batch = self.tokenizer.batch_encode_plus(
-            list_text, padding=True, truncation=True, max_length=self.max_length
-        )
+        truncation_text = [text[:self.max_length] for text in list_text]
+        tokenized_batch = self.tokenizer.batch_encode_plus(truncation_text)
         source = list(
             map(self.tokenizer.convert_ids_to_tokens, tokenized_batch.input_ids)
         )
@@ -100,23 +96,24 @@ if __name__ == "__main__":
        'ia']
     """
     translator = ctranslate2.Translator(
-        "data/pretrained_models/opus-mt-zh-en-converted", device="cuda"
+        "data/pretrained_models/converted/opus-mt-ru-en", device="cuda"
     )
-    tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-zh-en")
+    tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-ru-en")
 
     text = [
-        "不要插手巫師的事務, 因為他們是微妙的, 很快就會發怒 很快就會發怒.",
-        "不要插手巫師的事務, 因為他們是微妙的, 很快就會發怒.",
-        "不要插手巫師的事務, 因為他們是微妙的, 很快就會發怒.",
+        " Задаем функцию для подсчета метрик",
+        "Описание датасета Id идентификационный номер квартиры",
+        "Загрузка данных ",
     ]
-    # text = "Ne vous mêlez pas des affaires des sorciers, car ils sont insidieux et prompts à la colère."
-    tokenized_batch = tokenizer.batch_encode_plus(text)
+    processed = []
+    for t in text:
+        processed.append(t[:512])
+    tokenized_batch = tokenizer.batch_encode_plus(processed)
     source = list(map(tokenizer.convert_ids_to_tokens, tokenized_batch.input_ids))
     results = translator.translate_batch(source)
     print(
         tokenizer.batch_decode(
             [tokenizer.convert_tokens_to_ids(res.hypotheses[0]) for res in results],
             # list(map(tokenizer.convert_tokens_to_ids, results.hypotheses[0])),
-            skip_special_tokens=True,
         )
     )
