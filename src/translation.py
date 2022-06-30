@@ -76,6 +76,7 @@ def main():
     )
     if len(languages_df[languages_df != args.target_lang].index) == 0:
         logger.info(f"No notebooks found != {args.target_lang}, abort")
+        data.to_parquet(args.output)
         return
 
     for language, model_name in zip(languages, models_names):
