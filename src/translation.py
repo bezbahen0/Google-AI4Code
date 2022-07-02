@@ -9,6 +9,7 @@ import numpy as np
 
 from tqdm import tqdm
 from .models import MarianMTModel, LanguageIdentification
+from .lang_group import LANG_GROUPS
 
 tqdm.pandas()
 
@@ -25,14 +26,24 @@ def predict_notebooks_lang(data, model_path, save_path):
     return languages
 
 
-def target_indexs(df, target_lang):
-    return df[df == target_lang]
+def target_indexs(df, target_lang_code):
+    return df[df == target_lang_code]
+
+
+def target_indexs_lang_group(df, targets_lang_group):
+    return df[df.isin(targets_lang_group)]
 
 
 def get_supported_languages(models_names):
     """model name have format: opus-mt-{source_lang}-{target_lang}"""
-    languages = [model_name.replace("opus-mt-", "")[:2] for model_name in models_names]
+    languages = [
+        model_name.replace("opus-mt-", "").split("-") for model_name in models_names
+    ]
     return languages, models_names
+
+
+def is_lang_group(language_code):
+    return len(language_code) > 2 
 
 
 def main():
@@ -76,20 +87,28 @@ def main():
     )
     if len(languages_df[languages_df != args.target_lang].index) == 0:
         logger.info(f"No notebooks found != {args.target_lang}, abort")
+        logger.info(f"Saving copy of cleaned data to {args.output}")
         data.to_parquet(args.output)
         return
 
-    for language, model_name in zip(languages, models_names):
+    for (source_model_lang, _), model_name in zip(languages, models_names):
         model_path = os.path.join(args.marianmt_models_dir_path, model_name)
         tokenizer_path = os.path.join(args.tokenizers_dir_path, model_name)
         translation_model = MarianMTModel(
             model_path=model_path, tokenizer_path=tokenizer_path
         )
-
-        need_translate_ids = target_indexs(languages_df, language).index
+    
+        if is_lang_group(source_model_lang):
+            need_translate_ids = target_indexs_lang_group(
+                languages_df, LANG_GROUPS[source_model_lang]
+            ).index
+        else:
+            need_translate_ids = target_indexs(
+                languages_df, source_model_lang
+            ).index
         to_translate = data.loc[data["id"].isin(need_translate_ids)]
 
-        description = f"Translate {len(need_translate_ids)} from {language} notebooks to {args.target_lang}"
+        description = f"Translate {len(need_translate_ids)} from {source_model_lang} notebooks to {args.target_lang}"
 
         translated = []
         num_slices = len(to_translate) // args.batch_size

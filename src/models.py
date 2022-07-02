@@ -96,13 +96,13 @@ if __name__ == "__main__":
        'ia']
     """
     translator = ctranslate2.Translator(
-        "data/pretrained_models/converted/opus-mt-ru-en", device="cuda"
+        "data/pretrained_models/converted/opus-mt-ine-en", device="cuda"
     )
-    tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-ru-en")
+    tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-ine-en")
 
     text = [
         " Задаем функцию для подсчета метрик",
-        "Описание датасета Id идентификационный номер квартиры",
+        "Описание датасета Id идентификационный номер квартиры Helsinki_ Helsinki_",
         "Загрузка данных ",
     ]
     processed = []
