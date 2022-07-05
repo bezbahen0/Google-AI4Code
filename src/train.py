@@ -113,9 +113,7 @@ def train_transformer(
                 scheduler.step()
 
             loss_list.append(loss.detach().cpu().item())
-            preds.append(pred.detach().cpu().numpy().ravel())
-            labels.append(target.detach().cpu().numpy().ravel())
-
+           
             avg_loss = np.round(np.mean(loss_list), 4)
 
             tbar.set_description(

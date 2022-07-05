@@ -114,14 +114,14 @@ def main():
     data = pd.read_parquet(args.data)
 
     if args.clear == "all":
-        data = clear_markdown(data)
-        data = clear_code(data)
+        data = clear_markdown(data, logger)
+        data = clear_code(data, logger)
 
     if args.clear == "markdown":
-        data = clear_markdown(data)
+        data = clear_markdown(data, logger)
 
     if args.clear == "code":
-        data = clear_code(data)
+        data = clear_code(data, logger)
 
     logger.info(f"Save cleaned data to {args.output}")
     data.to_parquet(args.output)

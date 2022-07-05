@@ -104,7 +104,7 @@ rule clean_data:
     output:
         "data/clean/train_all_cleaned.parquet"
     shell:
-        "python -m src.clean --data {input} --output {output} --clean all"
+        "python -m src.clean --data {input} --output {output} --clear all"
 
 
 rule join_data:
