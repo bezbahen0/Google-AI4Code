@@ -1,16 +1,39 @@
-#rule all:
-#    input:
-#        "data/featurized/transformers_data.pkl",
-#        "data/models/xgbranker.ubj"
+rule all:
+    input:
+        "data/models/xgbranker.ubj",
+        "data/models/codebert_trained_model.pt"
 
 
-#rule train_xgbranker:
-#    input:
-#        "data/featurized/xgb_data.pkl"
-#    output:
-#        "data/models/xgbranker.ubj"
-#    shell:
-#        "python -m src.train --data {input} --output {output}"
+rule train_xgbranker:
+    input:
+        "data/featurized/xgb_data.pkl"
+    output:
+        "data/models/xgbranker.ubj"
+    shell:
+        "python -m src.train --data {input} --output {output} --task xgbranker"
+
+
+rule train_transformer:
+    input:
+        "data/featurized/transformer_data.pkl",
+        "data/featurized/transformer_features.json"
+    output:
+        "data/models/codebert_trained_model.pt"
+    shell:
+        '''
+        python -m src.train \
+            --data {input[0]} \
+            --ouput {output} \
+            --task transformer \
+            --features_data_path {input[1]} \
+            --model_name_or_path 'microsoft/codebert-base' \
+            --md_max_len 64 \
+            --total_max_len 512 \
+            --batch_size 8 \
+            --n_workers 6 \
+            --epochs 5\
+        '''
+
 
 rule featurize_transformer_data:
     input:
@@ -24,32 +47,30 @@ rule featurize_transformer_data:
             --data {input} \
             --output {output[0]} \
             --task transformer \
-            --tokenizer_transformer_path 'microsoft/codebert-base' \
             --features_out_path {output[1]} \
-            --md_max_len 64 \
-            --total_max_len 512 \
             --num_selected_code_cells 20 \
-            --mode train \
+            --mode train 
         '''
 
-#rule featurize_xgb_data:
-#    input:
-#        #"data/clean/train_all_cleaned.parquet"
-#        "data/translated/train_all_translated.parquet"
-#    output:
-#        "data/featurized/xgb_data.pkl",
-#        "data/featurized/tfidf_voc.pkl",
-#        "data/featurized/tfidf_idf.pkl"
-#    shell:
-#        '''
-#        python -m src.featurize \
-#            --data {input} \
-#            --output {output[0]} \
-#            --task xgbranker \
-#            --tfidf_voc_path {output[1]} \
-#            --tfidf_idf_path {output[2]} \
-#            --mode train
-#        '''
+
+rule featurize_xgb_data:
+    input:
+        #"data/clean/train_all_cleaned.parquet"
+        "data/translated/train_all_translated.parquet"
+    output:
+        "data/featurized/xgb_data.pkl",
+        "data/featurized/tfidf_voc.pkl",
+        "data/featurized/tfidf_idf.pkl"
+    shell:
+        '''
+        python -m src.featurize \
+            --data {input} \
+            --output {output[0]} \
+            --task xgbranker \
+            --tfidf_voc_path {output[1]} \
+            --tfidf_idf_path {output[2]} \
+            --mode train
+        '''
 
 
 rule translate_markdowns_cells:
