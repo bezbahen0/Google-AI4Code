@@ -9,28 +9,20 @@ import ctranslate2
 import torch
 import torch.nn as nn
 
-from transformers import (
-    AutoModel,
-    AutoModelForSeq2SeqLM,
-    AutoTokenizer,
-    AdamW,
-    get_linear_schedule_with_warmup,
-)
+from transformers import AutoModel, AutoTokenizer
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-
 class TransformersModel(nn.Module):
     def __init__(self, model_path):
-        super(MarkdownModel, self).__init__()
+        super(TransformersModel, self).__init__()
         self.model = AutoModel.from_pretrained(model_path)
         self.top = nn.Linear(769, 1)
-
+        
     def forward(self, ids, mask, fts):
         x = self.model(ids, mask)[0]
-        x = torch.cat((x[:, 0, :], fts), 1)
-        x = self.top(x)
-        return
+        x = self.top(torch.cat((x[:, 0, :], fts),1))
+        return x
 
 
 class MarianMTModel:
@@ -87,6 +79,7 @@ class XGBrankerModel:
             verbosity=2,
             n_jobs=os.cpu_count(),
         )
+
 
 if __name__ == "__main__":
     """

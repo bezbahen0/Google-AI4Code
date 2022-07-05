@@ -4,9 +4,9 @@ import pickle
 import pandas as pd
 
 from transformers import AutoModel, AutoTokenizer
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import Dataset
 
-class XGBrankerDataset:
+class XGBrankerDataSet:
     def __init__(self, data_path):
         self.data_path = data_path
 
@@ -52,7 +52,7 @@ class TransformersDataset(Dataset):
         )
 
         total_markdown = self.data_fts[row.id]["total_md"]
-        total_code = self.data_fts[row.id]["total_md"]
+        total_code = self.data_fts[row.id]["total_code"]
         if total_markdown + total_code == 0:
             fts = torch.FloatTensor([0])
         else:
@@ -82,14 +82,14 @@ class TransformersDataset(Dataset):
         )
 
         mask = mask[: self.total_max_len]
-        ids = torch.nn.functional.pad(
-            ids,
-            (0, self.total_max_len - len(ids)),
+        mask = torch.nn.functional.pad(
+            mask,
+            (0, self.total_max_len - len(mask)),
             "constant",
             self.tokenizer.pad_token_id,
         )
 
-        return ids, mask, fts, torch.FloatTensor([row.pct_rank])
+        return (ids, mask, fts), torch.FloatTensor([row.pct_rank])
     
     def __len__(self):
         return self.data.shape[0]
