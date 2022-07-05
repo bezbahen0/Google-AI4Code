@@ -1,10 +1,14 @@
 import os
 
 import fasttext
-import torch
+
 from xgboost import XGBRanker
 
 import ctranslate2
+
+import torch
+import torch.nn as nn
+
 from transformers import (
     AutoModel,
     AutoModelForSeq2SeqLM,
@@ -16,16 +20,17 @@ from transformers import (
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-class TransformersModel:
+class TransformersModel(nn.Module):
     def __init__(self, model_path):
-        self.model = AutoModel.from_pretrained(model_path, num_labels=1)
-        self.model.compile(
-            optimizer=tf.keras.optimizers.Adam(learning_rate=5e-5),
-            loss=tf.keras.losses.Huber(),
-        )
+        super(MarkdownModel, self).__init__()
+        self.model = AutoModel.from_pretrained(model_path)
+        self.top = nn.Linear(769, 1)
 
-        # self.top = nn.Linear(769, 1)
-        self.tokenzier = AutoTokenizer.from_pretrained(model_path)
+    def forward(self, ids, mask, fts):
+        x = self.model(ids, mask)[0]
+        x = torch.cat((x[:, 0, :], fts), 1)
+        x = self.top(x)
+        return
 
 
 class MarianMTModel:
@@ -47,7 +52,7 @@ class MarianMTModel:
         if not list_text:
             return list_text
 
-        truncation_text = [text[:self.max_length] for text in list_text]
+        truncation_text = [text[: self.max_length] for text in list_text]
         tokenized_batch = self.tokenizer.batch_encode_plus(truncation_text)
         source = list(
             map(self.tokenizer.convert_ids_to_tokens, tokenized_batch.input_ids)
@@ -82,7 +87,6 @@ class XGBrankerModel:
             verbosity=2,
             n_jobs=os.cpu_count(),
         )
-
 
 if __name__ == "__main__":
     """

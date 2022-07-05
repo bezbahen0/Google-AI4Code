@@ -54,6 +54,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=str)
     parser.add_argument("--output", type=str)
+    
     parser.add_argument("--lang_ident_out", type=str)
     parser.add_argument("--target_lang", type=str)
     parser.add_argument("--fasttext_ident_path", type=str)

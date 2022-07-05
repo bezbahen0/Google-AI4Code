@@ -1,23 +1,55 @@
+#rule all:
+#    input:
+#        "data/featurized/transformers_data.pkl",
+#        "data/models/xgbranker.ubj"
 
-rule train_xgbranker:
+
+#rule train_xgbranker:
+#    input:
+#        "data/featurized/xgb_data.pkl"
+#    output:
+#        "data/models/xgbranker.ubj"
+#    shell:
+#        "python -m src.train --data {input} --output {output}"
+
+rule featurize_transformer_data:
     input:
-        "data/featurized/xgb_data.pkl"
-    output:
-        "data/models/xgbranker.ubj"
-    shell:
-        "python -m src.train --data {input} --output {output}"
-
-
-rule featurize_xgb_data:
-    input:
-        #"data/clean/train_all_cleaned.parquet"
         "data/translated/train_all_translated.parquet"
     output:
-        "data/featurized/xgb_data.pkl",
-        "data/featurized/tfidf_voc.pkl",
-        "data/featurized/tfidf_idf.pkl"
+        "data/featurized/transformer_data.pkl",
+        "data/featurized/transformer_features.json"
     shell:
-        "python -m src.featurize --data {input} --output {output[0]} --task xgbranker --mode train"
+        ''' 
+        python -m src.featurize \
+            --data {input} \
+            --output {output[0]} \
+            --task transformer \
+            --tokenizer_transformer_path 'microsoft/codebert-base' \
+            --features_out_path {output[1]} \
+            --md_max_len 64 \
+            --total_max_len 512 \
+            --num_selected_code_cells 20 \
+            --mode train \
+        '''
+
+#rule featurize_xgb_data:
+#    input:
+#        #"data/clean/train_all_cleaned.parquet"
+#        "data/translated/train_all_translated.parquet"
+#    output:
+#        "data/featurized/xgb_data.pkl",
+#        "data/featurized/tfidf_voc.pkl",
+#        "data/featurized/tfidf_idf.pkl"
+#    shell:
+#        '''
+#        python -m src.featurize \
+#            --data {input} \
+#            --output {output[0]} \
+#            --task xgbranker \
+#            --tfidf_voc_path {output[1]} \
+#            --tfidf_idf_path {output[2]} \
+#            --mode train
+#        '''
 
 
 rule translate_markdowns_cells:

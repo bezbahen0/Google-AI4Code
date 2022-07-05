@@ -96,12 +96,15 @@ def merge_test(json_dir):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--train_orders", type=str)
-    parser.add_argument("--train_ancestors", type=str)
     parser.add_argument("--mode", type=str)
     parser.add_argument("--data", type=str)
     parser.add_argument("--output", type=str)
+
+    parser.add_argument("--train_orders", type=str)
+    parser.add_argument("--train_ancestors", type=str)
+
     args = parser.parse_args()
+    
     # Get the list of json files
     notebooks_jsons = os.listdir(args.data)
     print(f"There are {len(notebooks_jsons)} notebooks json files")

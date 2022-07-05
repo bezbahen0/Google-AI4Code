@@ -64,7 +64,7 @@ def preprocess_text(text):
     return text
 
 
-def sub_all(text):
+def markdown_sub_all(text):
     text = sub_html_tags(text)
     text = sub_latex_math(text)
     text = sub_links(text)
@@ -72,6 +72,9 @@ def sub_all(text):
     text = preprocess_text(text)
     return text
 
+def code_sub_all(text):
+    text = text.replace("\\n", "\n")
+    return text
 
 def main():
     """ Runs data processing scripts to turn raw data from (data/raw) into
@@ -92,10 +95,12 @@ def main():
     # loading steps go here
     data = pd.read_parquet(args.data)
     
-    logger.info("Cleaning data")
+    logger.info("Cleaning data markdowns cells source")
+    data.loc[data.cell_type == "markdown", 'source'] = data.loc[data.cell_type == "markdown", 'source'].parallel_apply(markdown_sub_all)
 
-    # cleaning steps go here
-    data.loc[data.cell_type == "markdown", 'source'] = data.loc[data.cell_type == "markdown", 'source'].parallel_apply(sub_all)
+    logger.info("Cleaning data code cells source")
+    data.loc[data.cell_type == "code", 'source'] = data.loc[data.cell_type == "code", 'source'].parallel_apply(code_sub_all)
+
     logger.info(f"Saving cleaned data to {args.output}")
 
     # saving steps go here
