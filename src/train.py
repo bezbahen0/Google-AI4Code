@@ -12,10 +12,6 @@ from .models import XGBrankerModel, TransformersModel
 from .dataset import XGBrankerDataSet, TransformersDataset
 
 
-def to_cuda(data):
-    return [d.cuda() for d in data[0]], data[1].cuda()
-
-
 def train_xgbranker(data_path, output_model_path):
     dataset = XGBrankerDataSet(data_path)
     X_train, y_train, groups = dataset.load_data()
@@ -28,22 +24,13 @@ def train_xgbranker(data_path, output_model_path):
 def train_transformer(
     data_path,
     output_model_path,
-    data_fts_path,
     model_name_or_path,
-    md_max_len,
-    total_max_len,
     accumulation_steps,
     batch_size,
     epochs,
     n_workers,
 ):
-    train_data = TransformersDataset(
-        data_path,
-        model_name_or_path=model_name_or_path,
-        md_max_len=md_max_len,
-        total_max_len=total_max_len,
-        data_fts_path=data_fts_path,
-    )
+    train_data = TransformersDataset(data_path)
 
     train_data.load_data()
 
@@ -57,7 +44,7 @@ def train_transformer(
     )
 
     model = TransformersModel(model_name_or_path)
-    model = model.cuda()
+    model = model  # .cuda()
 
     # Creating optimizer and lr schedulers
     param_optimizer = list(model.named_parameters())
@@ -79,7 +66,10 @@ def train_transformer(
 
     num_train_optimization_steps = int(epochs * len(train_loader) / accumulation_steps)
     optimizer = AdamW(
-        optimizer_grouped_parameters, lr=3e-5, correct_bias=False
+        optimizer_grouped_parameters,
+        lr=3e-5,
+        correct_bias=False,
+        no_deprecation_warning=True,
     )  # To reproduce BertAdam specific behavior set correct_bias=False
 
     scheduler = get_linear_schedule_with_warmup(
@@ -99,10 +89,26 @@ def train_transformer(
         labels = []
 
         for idx, data in enumerate(tbar):
-            inputs, target = to_cuda(data)
+            ids, mask, fts, target = data
+            # print(ids.shape, mask.shape, fts.shape, target.shape)
+            print(ids)
+            print(mask)
+            print("\n")
+            ids = ids.to(torch.int)  # .cuda()
+            mask = mask.to(torch.int)  # .cuda()
+            print(ids)
+            print(mask)
+            ids = torch.zeros_like(ids, dtype=torch.int)  # .cuda()
+            mask = torch.zeros_like(mask, dtype=torch.int)  # .cuda()
+            print("\n")
+            print(ids)
+            print(mask)
+
+            fts = fts  # .cuda()
+            target = target  # .cuda()
 
             with torch.cuda.amp.autocast():
-                pred = model(*inputs)
+                pred = model(ids=ids, mask=mask, fts=fts)
                 loss = criterion(pred, target)
 
             scaler.scale(loss).backward()
@@ -113,7 +119,7 @@ def train_transformer(
                 scheduler.step()
 
             loss_list.append(loss.detach().cpu().item())
-           
+
             avg_loss = np.round(np.mean(loss_list), 4)
 
             tbar.set_description(
@@ -139,10 +145,7 @@ def main():
     parser.add_argument("--output", type=str)
     parser.add_argument("--task", type=str)
 
-    parser.add_argument("--features_data_path", type=str)
     parser.add_argument("--model_name_or_path", type=str)
-    parser.add_argument("--md_max_len", type=int)
-    parser.add_argument("--total_max_len", type=int)
     parser.add_argument("--accumulation_steps", type=int, default=4)
     parser.add_argument("--batch_size", type=int, default=8)
     parser.add_argument("--n_workers", type=int, default=6)
@@ -158,10 +161,7 @@ def main():
         train_transformer(
             args.data,
             args.output,
-            args.features_data_path,
             args.model_name_or_path,
-            args.md_max_len,
-            args.total_max_len,
             args.accumulation_steps,
             args.batch_size,
             args.epochs,

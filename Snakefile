@@ -15,24 +15,20 @@ rule all:
 
 rule train_transformer:
     input:
-        "data/featurized/transformer_data.parquet",
-        "data/featurized/transformer_features.json"
+        "data/featurized/transformer_data.npy"
     output:
         "data/models/codebert_trained_model.bin"
     shell:
         '''
         python -m src.train \
-            --data {input[0]} \
+            --data {input} \
             --output {output} \
             --task transformer \
-            --features_data_path {input[1]} \
             --model_name_or_path 'microsoft/codebert-base' \
-            --md_max_len 64 \
-            --total_max_len 512 \
             --accumulation_steps 4 \
             --batch_size 10 \
             --n_workers 6 \
-            --epochs 5\
+            --epochs 5
         '''
 
 
@@ -41,7 +37,7 @@ rule featurize_transformer_data:
         #"data/translated/train_all_translated.parquet"
         "data/clean/train_all_cleaned.parquet",
     output:
-        "data/featurized/transformer_data.parquet",
+        "data/featurized/transformer_data.npy",
         "data/featurized/transformer_features.json"
     shell:
         '''
@@ -50,6 +46,9 @@ rule featurize_transformer_data:
             --output {output[0]} \
             --task transformer \
             --features_out_path {output[1]} \
+            --model_name_or_path  'microsoft/codebert-base' \
+            --md_max_len 64 \
+            --total_max_len 512 \
             --num_selected_code_cells 20 \
             --mode train 
         '''

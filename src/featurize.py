@@ -1,6 +1,7 @@
 import os
 import pickle
 import json
+import torch
 import logging
 import argparse
 
@@ -10,6 +11,8 @@ import numpy as np
 from tqdm import tqdm
 from scipy import sparse
 from sklearn.feature_extraction.text import TfidfVectorizer
+
+from transformers import AutoModel, AutoTokenizer
 
 
 class Featurizer:
@@ -119,12 +122,18 @@ class TransformersFeaturizer(Featurizer):
         data_path,
         featurized_path,
         fts_out_path,
+        model_name_or_path,
         num_selected_code_cells,
+        md_max_len,
+        total_max_len,
         logger,
     ):
         super().__init__(data_path, featurized_path, logger)
         self.fts_out_path = fts_out_path
         self.num_selected_code_cells = num_selected_code_cells
+        self.md_max_len = md_max_len
+        self.total_max_len = total_max_len  # maxlen allowed by model config
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
 
     def _featurize_train(self):
         train_data = self._load_data()
@@ -137,6 +146,90 @@ class TransformersFeaturizer(Featurizer):
             pct=True
         )
         self._preprocess(test_data)
+    
+    def _zeros(self, shape, dtype):
+        '''alocation of desired memory during initialization, alternative to np.zeros'''
+        array = np.empty(shape, dtype=dtype)
+        array.fill(0)
+        return array
+
+    def _featurize(self, data, data_fts):
+        shape = (len(data), self.total_max_len)
+
+        inputs_ids = self._zeros(shape, dtype='int64')
+        masks = self._zeros(shape, dtype='int64')
+        inputs_features = self._zeros((len(data)), dtype='float32')
+        ranks = self._zeros((len(data)), dtype='float32')
+        for idx, row in tqdm(
+            enumerate(data.itertuples()),
+            desc="Feturise transformers data",
+            total=len(data),
+        ):
+            inputs = self.tokenizer.encode_plus(
+                row.source,
+                None,
+                add_special_tokens=True,
+                max_length=self.md_max_len,
+                padding="max_length",
+                return_token_type_ids=True,
+                truncation=True,
+                return_tensors="np",
+            )
+
+            code_inputs = self.tokenizer.batch_encode_plus(
+                data_fts[row.id]["codes"],
+                add_special_tokens=True,
+                max_length=23,
+                padding="max_length",
+                truncation=True,
+                return_tensors="np",
+            )
+
+            total_markdown = data_fts[row.id]["total_md"]
+            total_code = data_fts[row.id]["total_code"]
+            if total_markdown + total_code == 0:
+                fts = 0
+            else:
+                fts = [total_markdown / float(total_markdown + total_code)]
+
+            ids = np.concatenate(
+                [
+                    inputs["input_ids"].flatten(),
+                    code_inputs["input_ids"].flatten(),
+                ]
+            )
+
+            ids = ids[: self.total_max_len]
+            ids = np.pad(
+                ids,
+                (0, self.total_max_len - len(ids)),
+                "constant",
+                constant_values=(self.tokenizer.pad_token_id),
+            )
+
+            assert len(ids) == self.total_max_len
+
+            mask = np.concatenate(
+                [
+                    inputs["attention_mask"].flatten(),
+                    code_inputs["attention_mask"].flatten(),
+                ]
+            )
+
+            mask = mask[: self.total_max_len]
+            mask = np.pad(
+                mask,
+                (0, self.total_max_len - len(mask)),
+                "constant",
+                constant_values=(self.tokenizer.pad_token_id),
+            )
+
+            inputs_ids[idx, :] = ids
+            masks[idx, :] = mask
+            inputs_features[idx] = np.asarray([fts])
+            ranks[idx] = np.asarray([row.pct_rank])
+
+        return inputs_ids, masks, inputs_features, ranks
 
     def _preprocess(self, data):
         data["pct_rank"] = data.groupby(["id", "cell_type"])["order"].rank(pct=True)
@@ -147,7 +240,12 @@ class TransformersFeaturizer(Featurizer):
         self.logger.info(f"Save data_fts to {self.fts_out_path}")
 
         data_markdowns = data[data["cell_type"] == "markdown"].reset_index(drop=True)
-        data_markdowns.to_parquet(self.featurized_path)
+        ids, masks, fts, ranks = self._featurize(data_markdowns, data_fts)
+        with open(self.featurized_path, "wb") as f:
+            np.save(f, ids)
+            np.save(f, masks)
+            np.save(f, fts)
+            np.save(f, ranks)
 
     def _sample_cells(self, cells, n):
         if n >= len(cells):
@@ -191,11 +289,14 @@ def main():
     parser.add_argument("--output", type=str)
     parser.add_argument("--task", type=str)
     parser.add_argument("--mode", type=str)
-    
+
     parser.add_argument("--tfidf_idf_path", type=str)
     parser.add_argument("--tfidf_voc_path", type=str)
     parser.add_argument("--features_out_path", type=str)
     parser.add_argument("--num_selected_code_cells", type=int)
+    parser.add_argument("--model_name_or_path", type=str)
+    parser.add_argument("--md_max_len", type=int)
+    parser.add_argument("--total_max_len", type=int)
     args = parser.parse_args()
 
     logger = logging.getLogger(__name__)
@@ -214,7 +315,10 @@ def main():
             args.data,
             args.output,
             args.features_out_path,
+            args.model_name_or_path,
             args.num_selected_code_cells,
+            args.md_max_len,
+            args.total_max_len,
             logger=logger,
         )
 
