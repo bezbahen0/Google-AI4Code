@@ -33,8 +33,8 @@ class TransformersDataset(Dataset):
         return (
             torch.from_numpy(self.ids[index]),
             torch.from_numpy(self.masks[index]),
-            torch.from_numpy(self.fts[index]),
-            torch.from_numpy(self.ranks[index]),
+            torch.FloatTensor([self.fts[index]]),
+            torch.FloatTensor([self.ranks[index]]),
         )
 
     def __len__(self):

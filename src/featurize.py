@@ -156,8 +156,8 @@ class TransformersFeaturizer(Featurizer):
     def _featurize(self, data, data_fts):
         shape = (len(data), self.total_max_len)
 
-        inputs_ids = self._zeros(shape, dtype='int64')
-        masks = self._zeros(shape, dtype='int64')
+        inputs_ids = self._zeros(shape, dtype='int32')
+        masks = self._zeros(shape, dtype='int32')
         inputs_features = self._zeros((len(data)), dtype='float32')
         ranks = self._zeros((len(data)), dtype='float32')
         for idx, row in tqdm(
@@ -238,9 +238,11 @@ class TransformersFeaturizer(Featurizer):
         json.dump(data_fts, open(self.fts_out_path, "wt"))
 
         self.logger.info(f"Save data_fts to {self.fts_out_path}")
-
+        print("her")
         data_markdowns = data[data["cell_type"] == "markdown"].reset_index(drop=True)
+        print("her3")
         ids, masks, fts, ranks = self._featurize(data_markdowns, data_fts)
+        print("he2")
         with open(self.featurized_path, "wb") as f:
             np.save(f, ids)
             np.save(f, masks)

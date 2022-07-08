@@ -44,7 +44,7 @@ def train_transformer(
     )
 
     model = TransformersModel(model_name_or_path)
-    model = model  # .cuda()
+    model = model.cuda()
 
     # Creating optimizer and lr schedulers
     param_optimizer = list(model.named_parameters())
@@ -90,22 +90,11 @@ def train_transformer(
 
         for idx, data in enumerate(tbar):
             ids, mask, fts, target = data
-            # print(ids.shape, mask.shape, fts.shape, target.shape)
-            print(ids)
-            print(mask)
-            print("\n")
-            ids = ids.to(torch.int)  # .cuda()
-            mask = mask.to(torch.int)  # .cuda()
-            print(ids)
-            print(mask)
-            ids = torch.zeros_like(ids, dtype=torch.int)  # .cuda()
-            mask = torch.zeros_like(mask, dtype=torch.int)  # .cuda()
-            print("\n")
-            print(ids)
-            print(mask)
 
-            fts = fts  # .cuda()
-            target = target  # .cuda()
+            ids = ids.cuda()
+            mask = mask.cuda()
+            fts = fts.cuda()
+            target = target.cuda()
 
             with torch.cuda.amp.autocast():
                 pred = model(ids=ids, mask=mask, fts=fts)
