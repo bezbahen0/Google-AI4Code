@@ -12,8 +12,8 @@ from .models import XGBrankerModel, TransformersModel
 from .dataset import XGBrankerDataSet, TransformersDataset
 
 
-def to_cuda(data):
-    return [d.cuda() for d in data[0]], data[1].cuda()
+#def to_cuda(data):
+#    return [d.cuda() for d in data[0]], data[1].cuda()
 
 
 def train_xgbranker(data_path, output_model_path):
@@ -99,10 +99,15 @@ def train_transformer(
         labels = []
 
         for idx, data in enumerate(tbar):
-            inputs, target = to_cuda(data)
+            ids, mask, fts, target = data
+
+            ids = ids.cuda()
+            mask = mask.cuda()
+            fts = fts.cuda()
+            target = target.cuda()
 
             with torch.cuda.amp.autocast():
-                pred = model(*inputs)
+                pred = model(ids=ids, mask=mask, fts=fts)
                 loss = criterion(pred, target)
 
             scaler.scale(loss).backward()

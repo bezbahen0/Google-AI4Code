@@ -89,7 +89,7 @@ class TransformersDataset(Dataset):
             self.tokenizer.pad_token_id,
         )
 
-        return (ids, mask, fts), torch.FloatTensor([row.pct_rank])
+        return ids, mask, fts, torch.FloatTensor([row.pct_rank])
     
     def __len__(self):
         return self.data.shape[0]

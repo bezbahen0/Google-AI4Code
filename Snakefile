@@ -26,11 +26,11 @@ rule train_transformer:
             --output {output} \
             --task transformer \
             --features_data_path {input[1]} \
-            --model_name_or_path 'microsoft/codebert-base' \
+            --model_name_or_path 'distilbert-base-uncased' \
             --md_max_len 64 \
             --total_max_len 512 \
             --accumulation_steps 4 \
-            --batch_size 10 \
+            --batch_size 24 \
             --n_workers 6 \
             --epochs 5\
         '''
@@ -38,8 +38,8 @@ rule train_transformer:
 
 rule featurize_transformer_data:
     input:
-        #"data/translated/train_all_translated.parquet"
-        "data/clean/train_all_cleaned.parquet",
+        "data/translated/train_all_translated.parquet"
+        #"data/clean/train_all_cleaned.parquet",
     output:
         "data/featurized/transformer_data.parquet",
         "data/featurized/transformer_features.json"
@@ -94,7 +94,7 @@ rule translate_markdowns_cells:
             --target_lang en \
             --marianmt_models_dir_path {input[2]}\
             --tokenizers_dir_path {input[3]} \
-            --batch_size 128
+            --batch_size 256
         '''
 
 
