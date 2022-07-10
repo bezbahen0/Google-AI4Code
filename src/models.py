@@ -9,14 +9,17 @@ import ctranslate2
 import torch
 import torch.nn as nn
 
-from transformers import AutoModel, AutoTokenizer
+from transformers import AutoModel, AutoTokenizer, AutoConfig
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 class TransformersModel(nn.Module):
     def __init__(self, model_path):
         super(TransformersModel, self).__init__()
-        self.model = AutoModel.from_pretrained(model_path)
+        #config = AutoConfig.from_pretrained(model_path)
+        #config.gradient_checkpointing = True
+
+        self.model = AutoModel.from_pretrained(model_path)#, config=config)
         self.top = nn.Linear(769, 1)
         
     def forward(self, ids, mask, fts):

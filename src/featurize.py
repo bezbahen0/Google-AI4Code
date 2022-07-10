@@ -238,11 +238,8 @@ class TransformersFeaturizer(Featurizer):
         json.dump(data_fts, open(self.fts_out_path, "wt"))
 
         self.logger.info(f"Save data_fts to {self.fts_out_path}")
-        print("her")
         data_markdowns = data[data["cell_type"] == "markdown"].reset_index(drop=True)
-        print("her3")
         ids, masks, fts, ranks = self._featurize(data_markdowns, data_fts)
-        print("he2")
         with open(self.featurized_path, "wb") as f:
             np.save(f, ids)
             np.save(f, masks)

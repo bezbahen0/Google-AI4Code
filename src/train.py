@@ -30,6 +30,8 @@ def train_transformer(
     epochs,
     n_workers,
 ):
+    torch.backends.cudnn.benchmark = True
+    
     train_data = TransformersDataset(data_path)
 
     train_data.load_data()
@@ -107,18 +109,22 @@ def train_transformer(
                 optimizer.zero_grad()
                 scheduler.step()
 
-            loss_list.append(loss.detach().cpu().item())
+            #loss_list.append(loss.detach().cpu().item())
 
-            avg_loss = np.round(np.mean(loss_list), 4)
+            #avg_loss = np.round(np.mean(loss_list), 4)
+
+            #tbar.set_description(
+            #    f"Epoch {e + 1} Loss: {avg_loss} lr: {scheduler.get_last_lr()}"
+            #)
 
             tbar.set_description(
-                f"Epoch {e + 1} Loss: {avg_loss} lr: {scheduler.get_last_lr()}"
+                f"Epoch {e + 1} lr: {scheduler.get_last_lr()}"
             )
 
-            if idx % 10000 == 0:
-                torch.save(
-                    model.state_dict(), output_model_path + f".epoch_{e}_idx_{idx}"
-                )
+            #if idx % 10000 == 0:
+            #    torch.save(
+            #        model.state_dict(), output_model_path + f".epoch_{e}_idx_{idx}"
+            #    )
 
         torch.save(model.state_dict(), output_model_path)
 

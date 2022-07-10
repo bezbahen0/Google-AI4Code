@@ -25,7 +25,7 @@ rule train_transformer:
             --output {output} \
             --task transformer \
             --model_name_or_path 'microsoft/codebert-base' \
-            --accumulation_steps 4 \
+            --accumulation_steps 8 \
             --batch_size 10 \
             --n_workers 6 \
             --epochs 5
