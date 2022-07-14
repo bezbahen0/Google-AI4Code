@@ -30,7 +30,6 @@ def train_transformer(
     epochs,
     n_workers,
 ):
-    torch.backends.cudnn.benchmark = True
     
     train_data = TransformersDataset(data_path)
 
@@ -93,10 +92,11 @@ def train_transformer(
         for idx, data in enumerate(tbar):
             ids, mask, fts, target = data
 
-            ids = ids.cuda()
-            mask = mask.cuda()
+            ids = ids.long().cuda()
+            mask = mask.long().cuda()
             fts = fts.cuda()
             target = target.cuda()
+
 
             with torch.cuda.amp.autocast():
                 pred = model(ids=ids, mask=mask, fts=fts)

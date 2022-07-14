@@ -24,9 +24,9 @@ rule train_transformer:
             --data {input} \
             --output {output} \
             --task transformer \
-            --model_name_or_path 'microsoft/codebert-base' \
+            --model_name_or_path 'distilbert-base-uncased' \
             --accumulation_steps 8 \
-            --batch_size 10 \
+            --batch_size 24 \
             --n_workers 6 \
             --epochs 5
         '''
@@ -34,8 +34,8 @@ rule train_transformer:
 
 rule featurize_transformer_data:
     input:
-        #"data/translated/train_all_translated.parquet"
-        "data/clean/train_all_cleaned.parquet",
+        "data/translated/train_all_translated.parquet"
+        #"data/clean/train_all_cleaned.parquet",
     output:
         "data/featurized/transformer_data.npy",
         "data/featurized/transformer_features.json"
@@ -93,7 +93,7 @@ rule translate_markdowns_cells:
             --target_lang en \
             --marianmt_models_dir_path {input[2]}\
             --tokenizers_dir_path {input[3]} \
-            --batch_size 128
+            --batch_size 256 
         '''
 
 
@@ -106,7 +106,7 @@ rule clean_data:
         "python -m src.clean --data {input} --output {output} --clear all"
 
 
-rule join_data:
+rule merge_data:
     input:
         "data/raw/train_orders.csv",
         "data/raw/train_ancestors.csv",
@@ -120,5 +120,6 @@ rule join_data:
             --train_ancestors {input[1]}  \
             --mode train \
             --data {input[2]} \
-            --output {output} 
+            --output {output}  \
+            --num_notebooks 1000 
         '''

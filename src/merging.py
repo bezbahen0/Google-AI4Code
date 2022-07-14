@@ -70,8 +70,9 @@ def get_example_df(train_path, example_id, train, ancestors):
     return example_df
 
 
-def merge_train(json_dir, orders_path, ancestors_path):
+def merge_train(json_dir, orders_path, ancestors_path, num_notebooks):
     train = pd.read_csv(orders_path)
+    train = train if num_notebooks is None else train.iloc[:num_notebooks]
     ancestors = pd.read_csv(ancestors_path)
 
     all_ids = train["id"].unique()
@@ -102,6 +103,7 @@ def main():
 
     parser.add_argument("--train_orders", type=str)
     parser.add_argument("--train_ancestors", type=str)
+    parser.add_argument("--num_notebooks", type=int, default=None)
 
     args = parser.parse_args()
     
@@ -110,7 +112,7 @@ def main():
     print(f"There are {len(notebooks_jsons)} notebooks json files")
 
     if args.mode == "train":
-        all_results = merge_train(args.data, args.train_orders, args.train_ancestors)
+        all_results = merge_train(args.data, args.train_orders, args.train_ancestors, args.num_notebooks)
     elif args.mode == "test":
         all_results = merge_test(args.data)
 
