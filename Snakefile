@@ -38,8 +38,8 @@ rule train_transformer:
 
 rule featurize_transformer_data:
     input:
-        "data/translated/train_all_translated.parquet"
-        #"data/clean/train_all_cleaned.parquet",
+        #"data/translated/train_all_translated.parquet"
+        "data/clean/train_all_cleaned.parquet",
     output:
         "data/featurized/transformer_data.parquet",
         "data/featurized/transformer_features.json"
@@ -107,7 +107,7 @@ rule clean_data:
         "python -m src.clean --data {input} --output {output} --clear all"
 
 
-rule join_data:
+rule merge_data:
     input:
         "data/raw/train_orders.csv",
         "data/raw/train_ancestors.csv",
@@ -121,5 +121,6 @@ rule join_data:
             --train_ancestors {input[1]}  \
             --mode train \
             --data {input[2]} \
-            --output {output} 
+            --output {output} \
+            --num_notebooks 1000 
         '''
