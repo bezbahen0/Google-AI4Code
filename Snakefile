@@ -38,10 +38,12 @@ rule train_transformer:
 
 rule featurize_transformer_data:
     input:
+        "data/merged/train_all.parquet"
         #"data/translated/train_all_translated.parquet"
-        "data/clean/train_all_cleaned.parquet",
+        #"data/clean/train_all_cleaned.parquet",
     output:
         "data/featurized/transformer_data.parquet",
+        "data/featurized/transformers_data_all.parquet"
         "data/featurized/transformer_features.json"
     shell:
         '''
@@ -49,7 +51,8 @@ rule featurize_transformer_data:
             --data {input} \
             --output {output[0]} \
             --task transformer \
-            --features_out_path {output[1]} \
+            --processed_out_path {output[1]}
+            --features_out_path {output[2]} \
             --num_selected_code_cells 20 \
             --mode train 
         '''

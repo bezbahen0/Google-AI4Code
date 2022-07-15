@@ -119,11 +119,13 @@ class TransformersFeaturizer(Featurizer):
         data_path,
         featurized_path,
         fts_out_path,
+        processed_out_path,
         num_selected_code_cells,
         logger,
     ):
         super().__init__(data_path, featurized_path, logger)
         self.fts_out_path = fts_out_path
+        self.processed_out_path = processed_out_path
         self.num_selected_code_cells = num_selected_code_cells
 
     def _featurize_train(self):
@@ -148,6 +150,7 @@ class TransformersFeaturizer(Featurizer):
 
         data_markdowns = data[data["cell_type"] == "markdown"].reset_index(drop=True)
         data_markdowns.to_parquet(self.featurized_path)
+        data.to_parquet(self.processed_out_path)
 
     def _sample_cells(self, cells, n):
         if n >= len(cells):
@@ -192,8 +195,12 @@ def main():
     parser.add_argument("--task", type=str)
     parser.add_argument("--mode", type=str)
     
+    # XGBRanker needed
     parser.add_argument("--tfidf_idf_path", type=str)
     parser.add_argument("--tfidf_voc_path", type=str)
+
+    # Transformers needed
+    parser.add_argument("--processed_out_path", type=str)
     parser.add_argument("--features_out_path", type=str)
     parser.add_argument("--num_selected_code_cells", type=int)
     args = parser.parse_args()
@@ -214,6 +221,7 @@ def main():
             args.data,
             args.output,
             args.features_out_path,
+            args.processed_out_path,
             args.num_selected_code_cells,
             logger=logger,
         )
