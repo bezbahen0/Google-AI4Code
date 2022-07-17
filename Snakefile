@@ -1,7 +1,7 @@
 rule all:
     input:
 #        "data/models/xgbranker.ubj",
-        "data/models/codebert_trained_model.bin"
+        "data/models/distilbert-5000-new-featurization-128-max_length.bin"
 
 
 #rule train_xgbranker:
@@ -18,7 +18,7 @@ rule train_transformer:
         "data/featurized/transformer_data.parquet",
         "data/featurized/transformer_features.json"
     output:
-        "data/models/codebert_trained_model.bin"
+        "data/models/distilbert-5000-new-featurization-128-max_length.bin"
     shell:
         '''
         python -m src.train \
@@ -27,8 +27,8 @@ rule train_transformer:
             --task transformer \
             --features_data_path {input[1]} \
             --model_name_or_path 'distilbert-base-uncased' \
-            --md_max_len 64 \
-            --total_max_len 512 \
+            --md_max_len 128 \
+            --total_max_len 128 \
             --accumulation_steps 4 \
             --batch_size 24 \
             --n_workers 6 \
@@ -43,7 +43,7 @@ rule featurize_transformer_data:
         #"data/clean/train_all_cleaned.parquet",
     output:
         "data/featurized/transformer_data.parquet",
-        "data/featurized/transformers_data_all.parquet"
+        "data/featurized/transformers_data_all.parquet",
         "data/featurized/transformer_features.json"
     shell:
         '''
@@ -51,7 +51,7 @@ rule featurize_transformer_data:
             --data {input} \
             --output {output[0]} \
             --task transformer \
-            --processed_out_path {output[1]}
+            --processed_out_path {output[1]} \
             --features_out_path {output[2]} \
             --num_selected_code_cells 20 \
             --mode train 
@@ -125,5 +125,5 @@ rule merge_data:
             --mode train \
             --data {input[2]} \
             --output {output} \
-            --num_notebooks 1000 
+            --num_notebooks 5000 
         '''

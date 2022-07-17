@@ -42,14 +42,14 @@ class TransformersDataset(Dataset):
             return_tensors="pt",
         )
 
-        code_inputs = self.tokenizer.batch_encode_plus(
-            self.data_fts[row.id]["codes"],
-            add_special_tokens=True,
-            max_length=23,
-            padding="max_length",
-            truncation=True,
-            return_tensors="pt",
-        )
+        #code_inputs = self.tokenizer.batch_encode_plus(
+        #    self.data_fts[row.id]["codes"],
+        #    add_special_tokens=True,
+        #    max_length=23,
+        #    padding="max_length",
+        #    truncation=True,
+        #    return_tensors="pt",
+        #)
 
         total_markdown = self.data_fts[row.id]["total_md"]
         total_code = self.data_fts[row.id]["total_code"]
@@ -60,36 +60,37 @@ class TransformersDataset(Dataset):
                 [total_markdown / float(total_markdown + total_code)]
             )
 
-        ids = torch.cat(
-            [inputs["input_ids"].flatten(), code_inputs["input_ids"].flatten()]
-        )
+        #ids = torch.cat(
+        #    [inputs["input_ids"].flatten(), code_inputs["input_ids"].flatten()]
+        #)
+        
+        #ids = inputs["input_ids"].flatten()
+        #ids = ids[: self.total_max_len]
+        #ids = torch.nn.functional.pad(
+        #    ids,
+        #    (0, self.total_max_len - len(ids)),
+        #    "constant",
+        #    self.tokenizer.pad_token_id,
+        #)
 
-        ids = ids[: self.total_max_len]
-        ids = torch.nn.functional.pad(
-            ids,
-            (0, self.total_max_len - len(ids)),
-            "constant",
-            self.tokenizer.pad_token_id,
-        )
+        #assert len(ids) == self.total_max_len
 
-        assert len(ids) == self.total_max_len
+        #mask = torch.cat(
+        #    [
+        #        inputs["attention_mask"].flatten(),
+        #        code_inputs["attention_mask"].flatten(),
+        #    ]
+        #)
 
-        mask = torch.cat(
-            [
-                inputs["attention_mask"].flatten(),
-                code_inputs["attention_mask"].flatten(),
-            ]
-        )
+        #mask = mask[: self.total_max_len]
+        #mask = torch.nn.functional.pad(
+        #    mask,
+        #    (0, self.total_max_len - len(mask)),
+        #    "constant",
+        #    self.tokenizer.pad_token_id,
+        #)
 
-        mask = mask[: self.total_max_len]
-        mask = torch.nn.functional.pad(
-            mask,
-            (0, self.total_max_len - len(mask)),
-            "constant",
-            self.tokenizer.pad_token_id,
-        )
-
-        return ids, mask, fts, torch.FloatTensor([row.pct_rank])
+        return inputs["input_ids"].flatten(), inputs["attention_mask"].flatten(), fts, torch.FloatTensor([row.pct_rank])
     
     def __len__(self):
         return self.data.shape[0]
