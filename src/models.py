@@ -22,6 +22,7 @@ class TransformersModel(nn.Module):
     def forward(self, ids, mask, fts):
         x = self.model(ids, mask)[0]
         x = self.top(torch.cat((x[:, 0, :], fts),1))
+        x = torch.sigmoid(x)
         return x
 
 

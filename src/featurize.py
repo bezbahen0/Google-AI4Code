@@ -162,6 +162,34 @@ class TransformersFeaturizer(Featurizer):
             results[-1] = cells[-1]
 
         return results
+    
+    def generate_triplet(self, df, mode='train'):
+        triplets = []
+        ids = df.id.unique()
+        random_drop = np.random.random(size=10000)>0.9
+        count = 0
+
+        for id, df_tmp in tqdm(df.groupby('id')):
+          df_tmp_markdown = df_tmp[df_tmp['cell_type']=='markdown']
+
+          df_tmp_code = df_tmp[df_tmp['cell_type']=='code']
+          df_tmp_code_rank = df_tmp_code['rank'].values
+          df_tmp_code_cell_id = df_tmp_code['cell_id'].values
+
+          for cell_id, rank in df_tmp_markdown[['cell_id', 'rank']].values:
+            labels = np.array([(r==(rank+1)) for r in df_tmp_code_rank]).astype('int')
+
+            for cid, label in zip(df_tmp_code_cell_id, labels):
+              count += 1
+              if label==1:
+                triplets.append( [cell_id, cid, label] )
+              elif mode == 'test':
+                triplets.append( [cell_id, cid, label] )
+              elif random_drop[count%10000]:
+                triplets.append( [cell_id, cid, label] )
+        
+        return triplets
+
 
     def _get_features(self, df):
         features = dict()

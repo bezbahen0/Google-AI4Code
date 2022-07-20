@@ -1,16 +1,16 @@
 rule all:
     input:
 #        "data/models/xgbranker.ubj",
-        "data/models/distilbert-5000-new-featurization-128-max_length.bin"
+        "data/models/distilbert-5000-sigmoid-new-featurization-128-max_length.bin"
 
 
-#rule train_xgbranker:
-#    input:
-#        "data/featurized/xgb_data.pkl"
-#    output:
-#        "data/models/xgbranker.ubj"
-#    shell:
-#        "python -m src.train --data {input} --output {output} --task xgbranker"
+rule train_xgbranker:
+    input:
+        "data/featurized/xgb_data.pkl"
+    output:
+        "data/models/xgbranker.ubj"
+    shell:
+        "python -m src.train --data {input} --output {output} --task xgbranker"
 
 
 rule train_transformer:
@@ -18,7 +18,7 @@ rule train_transformer:
         "data/featurized/transformer_data.parquet",
         "data/featurized/transformer_features.json"
     output:
-        "data/models/distilbert-5000-new-featurization-128-max_length.bin"
+        "data/models/distilbert-5000-sigmoid-new-featurization-128-max_length.bin"
     shell:
         '''
         python -m src.train \
@@ -30,7 +30,7 @@ rule train_transformer:
             --md_max_len 128 \
             --total_max_len 128 \
             --accumulation_steps 4 \
-            --batch_size 24 \
+            --batch_size 64 \
             --n_workers 6 \
             --epochs 5\
         '''
@@ -38,6 +38,7 @@ rule train_transformer:
 
 rule featurize_transformer_data:
     input:
+        #"data/merged/train_5000.parquet"
         "data/merged/train_all.parquet"
         #"data/translated/train_all_translated.parquet"
         #"data/clean/train_all_cleaned.parquet",
@@ -58,24 +59,23 @@ rule featurize_transformer_data:
         '''
 
 
-#rule featurize_xgb_data:
-#    input:
-#        #"data/clean/train_all_cleaned.parquet"
-#        "data/translated/train_all_translated.parquet"
-#    output:
-#        "data/featurized/xgb_data.pkl",
-#        "data/featurized/tfidf_voc.pkl",
-#        "data/featurized/tfidf_idf.pkl"
-#    shell:
-#        '''
-#        python -m src.featurize \
-#            --data {input} \
-#            --output {output[0]} \
-#            --task xgbranker \
-#            --tfidf_voc_path {output[1]} \
-#            --tfidf_idf_path {output[2]} \
-#            --mode train
-#        '''
+rule featurize_xgb_data:
+    input:
+        "data/translated/train_all_translated.parquet"
+    output:
+        "data/featurized/xgb_data.pkl",
+        "data/featurized/tfidf_voc.pkl",
+        "data/featurized/tfidf_idf.pkl"
+    shell:
+        '''
+        python -m src.featurize \
+            --data {input} \
+            --output {output[0]} \
+            --task xgbranker \
+            --tfidf_voc_path {output[1]} \
+            --tfidf_idf_path {output[2]} \
+            --mode train
+        '''
 
 
 rule translate_markdowns_cells:
@@ -124,6 +124,6 @@ rule merge_data:
             --train_ancestors {input[1]}  \
             --mode train \
             --data {input[2]} \
-            --output {output} \
-            --num_notebooks 5000 
+            --output {output}  \
+            --num_notebooks 5000
         '''
