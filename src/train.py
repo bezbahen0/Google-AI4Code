@@ -30,8 +30,7 @@ def train_transformer(
     output_model_path,
     data_fts_path,
     model_name_or_path,
-    md_max_len,
-    total_max_len,
+    max_len,
     accumulation_steps,
     batch_size,
     epochs,
@@ -40,8 +39,7 @@ def train_transformer(
     train_data = TransformersDataset(
         data_path,
         model_name_or_path=model_name_or_path,
-        md_max_len=md_max_len,
-        total_max_len=total_max_len,
+        max_len=max_len,
         data_fts_path=data_fts_path,
     )
 
@@ -146,8 +144,7 @@ def main():
 
     parser.add_argument("--features_data_path", type=str)
     parser.add_argument("--model_name_or_path", type=str)
-    parser.add_argument("--md_max_len", type=int)
-    parser.add_argument("--total_max_len", type=int)
+    parser.add_argument("--max_len", type=int)
     parser.add_argument("--accumulation_steps", type=int, default=4)
     parser.add_argument("--batch_size", type=int, default=8)
     parser.add_argument("--n_workers", type=int, default=6)
@@ -165,8 +162,7 @@ def main():
             args.output,
             args.features_data_path,
             args.model_name_or_path,
-            args.md_max_len,
-            args.total_max_len,
+            args.max_len,
             args.accumulation_steps,
             args.batch_size,
             args.epochs,

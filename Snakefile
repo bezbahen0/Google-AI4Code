@@ -27,8 +27,7 @@ rule train_transformer:
             --task transformer \
             --features_data_path {input[1]} \
             --model_name_or_path 'distilbert-base-uncased' \
-            --md_max_len 128 \
-            --total_max_len 128 \
+            --max_len 128 \
             --accumulation_steps 4 \
             --batch_size 64 \
             --n_workers 6 \
