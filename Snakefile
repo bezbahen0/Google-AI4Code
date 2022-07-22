@@ -1,7 +1,7 @@
 rule all:
     input:
 #        "data/models/xgbranker.ubj",
-        "data/models/distilbert-5000-sigmoid-new-featurization-128-max_length.bin"
+        "data/models/distilbert-5000-pairwise.bin"
 
 
 rule train_xgbranker:
@@ -15,21 +15,21 @@ rule train_xgbranker:
 
 rule train_transformer:
     input:
-        "data/featurized/transformer_data.parquet",
-        "data/featurized/transformer_features.json"
+        "data/featurized/transformer_data_id.parquet",
+        "data/featurized/transformers_data_source.parquet",
     output:
-        "data/models/distilbert-5000-sigmoid-new-featurization-128-max_length.bin"
+        "data/models/distilbert-5000-pairwise.bin"
     shell:
         '''
         python -m src.train \
             --data {input[0]} \
+            --source_data_path {input[1]} \
             --output {output} \
             --task transformer \
-            --features_data_path {input[1]} \
             --model_name_or_path 'distilbert-base-uncased' \
             --max_len 128 \
             --accumulation_steps 4 \
-            --batch_size 64 \
+            --batch_size 128 \
             --n_workers 6 \
             --epochs 5\
         '''
@@ -42,9 +42,8 @@ rule featurize_transformer_data:
         #"data/translated/train_all_translated.parquet"
         #"data/clean/train_all_cleaned.parquet",
     output:
-        "data/featurized/transformer_data.parquet",
-        "data/featurized/transformers_data_all.parquet",
-        "data/featurized/transformer_features.json"
+        "data/featurized/transformer_data_id.parquet",
+        "data/featurized/transformers_data_source.parquet",
     shell:
         '''
         python -m src.featurize \
@@ -52,7 +51,6 @@ rule featurize_transformer_data:
             --output {output[0]} \
             --task transformer \
             --processed_out_path {output[1]} \
-            --features_out_path {output[2]} \
             --num_selected_code_cells 20 \
             --mode train 
         '''

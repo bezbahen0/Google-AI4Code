@@ -26,9 +26,9 @@ def train_xgbranker(data_path, output_model_path):
 
 
 def train_transformer(
-    data_path,
+    data_id_path,
+    data_source_path,
     output_model_path,
-    data_fts_path,
     model_name_or_path,
     max_len,
     accumulation_steps,
@@ -37,10 +37,10 @@ def train_transformer(
     n_workers,
 ):
     train_data = TransformersDataset(
-        data_path,
+        data_id_path=data_id_path,
+        data_source_path=data_source_path,
         model_name_or_path=model_name_or_path,
         max_len=max_len,
-        data_fts_path=data_fts_path,
     )
 
     train_data.load_data()
@@ -86,7 +86,8 @@ def train_transformer(
         num_training_steps=num_train_optimization_steps,
     )  # PyTorch scheduler
 
-    criterion = torch.nn.L1Loss()
+    #criterion = torch.nn.L1Loss()
+    criterion = torch.nn.BCEWithLogitsLoss()
     scaler = torch.cuda.amp.GradScaler()
 
     for e in range(epochs):
@@ -97,15 +98,14 @@ def train_transformer(
         labels = []
 
         for idx, data in enumerate(tbar):
-            ids, mask, fts, target = data
+            ids, mask, target = data
 
             ids = ids.cuda()
             mask = mask.cuda()
-            fts = fts.cuda()
             target = target.cuda()
 
             with torch.cuda.amp.autocast():
-                pred = model(ids=ids, mask=mask, fts=fts)
+                pred = model(ids=ids, mask=mask)
                 loss = criterion(pred, target)
 
             scaler.scale(loss).backward()
@@ -142,7 +142,7 @@ def main():
     parser.add_argument("--output", type=str)
     parser.add_argument("--task", type=str)
 
-    parser.add_argument("--features_data_path", type=str)
+    parser.add_argument("--source_data_path", type=str)
     parser.add_argument("--model_name_or_path", type=str)
     parser.add_argument("--max_len", type=int)
     parser.add_argument("--accumulation_steps", type=int, default=4)
@@ -159,8 +159,8 @@ def main():
     if args.task == "transformer":
         train_transformer(
             args.data,
+            args.source_data_path,
             args.output,
-            args.features_data_path,
             args.model_name_or_path,
             args.max_len,
             args.accumulation_steps,

@@ -18,21 +18,27 @@ class XGBrankerDataSet:
 
 
 class TransformersDataset(Dataset):
-    def __init__(self, data_path, model_name_or_path, max_len, data_fts_path):
+    def __init__(self, data_id_path, data_source_path, model_name_or_path, max_len):
         super().__init__()
-        self.data_path = data_path
-        self.max_len = max_len 
+        self.data_id_path = data_id_path
+        self.data_source_path = data_source_path
+        self.max_len = max_len
         self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
-        self.data_fts_path = data_fts_path
 
     def load_data(self):
-        self.data = pd.read_parquet(self.data_path)
-        self.data_fts = json.load(open(self.data_fts_path))
+        self.data_id = pd.read_parquet(self.data_id_path)
+        self.data_source = pd.read_parquet(self.data_source_path)
+        self.data_source = dict(
+            zip(self.data_source.cell.values, self.data_source.source.values)
+        )
 
     def __getitem__(self, index):
-        row = self.data.iloc[index]
+        row = self.data_id.iloc[index]
+
+        text = self.data_source[row.cell_id] + " [SEP] " + self.data_source[row.cid]
+
         inputs = self.tokenizer.encode_plus(
-            row.source,
+            text,
             None,
             add_special_tokens=True,
             max_length=self.max_len,
@@ -42,21 +48,11 @@ class TransformersDataset(Dataset):
             return_tensors="pt",
         )
 
-        total_markdown = self.data_fts[row.id]["total_md"]
-        total_code = self.data_fts[row.id]["total_code"]
-        if total_markdown + total_code == 0:
-            fts = torch.FloatTensor([0])
-        else:
-            fts = torch.FloatTensor(
-                [total_markdown / float(total_markdown + total_code)]
-            )
-
         return (
             inputs["input_ids"].flatten(),
             inputs["attention_mask"].flatten(),
-            fts,
-            torch.FloatTensor([row.pct_rank]),
+            torch.FloatTensor([row.label]),
         )
 
     def __len__(self):
-        return self.data.shape[0]
+        return self.data_id.shape[0]

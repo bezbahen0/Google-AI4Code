@@ -16,6 +16,7 @@ class Featurizer:
     def __init__(self, data_path, featurized_path, logger, max_len=128):
         self.data_path = data_path
         self.featurized_path = featurized_path
+        self.max_len = max_len
         self.logger = logger
 
     def featurize(self, mode="test"):
@@ -118,19 +119,19 @@ class TransformersFeaturizer(Featurizer):
         self,
         data_path,
         featurized_path,
-        fts_out_path,
         processed_out_path,
-        num_selected_code_cells,
         logger,
     ):
         super().__init__(data_path, featurized_path, logger)
-        self.fts_out_path = fts_out_path
         self.processed_out_path = processed_out_path
-        self.num_selected_code_cells = num_selected_code_cells
 
     def _featurize_train(self):
         train_data = self._load_data()
+
         self._preprocess(train_data)
+
+        triplets = self._generate_triplet(train_data, mode="train")
+        triplets.to_parquet(self.featurized_path)
 
     def _featurize_test(self):
         test_data = self._load_data()
@@ -138,77 +139,44 @@ class TransformersFeaturizer(Featurizer):
         test_data["pred"] = test_data.groupby(["id", "cell_type"])["order"].rank(
             pct=True
         )
+
         self._preprocess(test_data)
+
+        triplets = self._generate_triplet(test_data, mode="test")
+        triplets.to_parquet(self.featurized_path)
 
     def _preprocess(self, data):
         data["pct_rank"] = data.groupby(["id", "cell_type"])["order"].rank(pct=True)
 
-        data_fts = self._get_features(data)
-        json.dump(data_fts, open(self.fts_out_path, "wt"))
-
-        self.logger.info(f"Save data_fts to {self.fts_out_path}")
-
-        data_markdowns = data[data["cell_type"] == "markdown"].reset_index(drop=True)
-        data_markdowns.to_parquet(self.featurized_path)
         data.to_parquet(self.processed_out_path)
 
-    def _sample_cells(self, cells, n):
-        if n >= len(cells):
-            return [cell[:200] for cell in cells]
-
-        results = cells[:: len(cells) // n]
-
-        if cells[-1] not in results:
-            results[-1] = cells[-1]
-
-        return results
-    
-    def generate_triplet(self, df, mode='train'):
+    def _generate_triplet(self, df, mode="train"):
         triplets = []
         ids = df.id.unique()
-        random_drop = np.random.random(size=10000)>0.9
+        random_drop = np.random.random(size=10000) > 0.9
         count = 0
 
-        for id, df_tmp in tqdm(df.groupby('id')):
-          df_tmp_markdown = df_tmp[df_tmp['cell_type']=='markdown']
+        for id, df_tmp in tqdm(df.groupby("id")):
+            df_tmp_markdown = df_tmp[df_tmp["cell_type"] == "markdown"]
 
-          df_tmp_code = df_tmp[df_tmp['cell_type']=='code']
-          df_tmp_code_rank = df_tmp_code['rank'].values
-          df_tmp_code_cell_id = df_tmp_code['cell_id'].values
+            df_tmp_code = df_tmp[df_tmp["cell_type"] == "code"]
+            df_tmp_code_rank = df_tmp_code["order"].values
+            df_tmp_code_cell_id = df_tmp_code["cell"].values
 
-          for cell_id, rank in df_tmp_markdown[['cell_id', 'rank']].values:
-            labels = np.array([(r==(rank+1)) for r in df_tmp_code_rank]).astype('int')
+            for cell_id, rank in df_tmp_markdown[["cell", "order"]].values:
+                labels = np.array([(r == (rank + 1)) for r in df_tmp_code_rank])
+                labels = labels.astype("int")
 
-            for cid, label in zip(df_tmp_code_cell_id, labels):
-              count += 1
-              if label==1:
-                triplets.append( [cell_id, cid, label] )
-              elif mode == 'test':
-                triplets.append( [cell_id, cid, label] )
-              elif random_drop[count%10000]:
-                triplets.append( [cell_id, cid, label] )
-        
-        return triplets
+                for cid, label in zip(df_tmp_code_cell_id, labels):
+                    count += 1
+                    if label == 1:
+                        triplets.append([cell_id, cid, label])
+                    elif mode == "test":
+                        triplets.append([cell_id, cid, label])
+                    elif random_drop[count % 10000]:
+                        triplets.append([cell_id, cid, label])
 
-
-    def _get_features(self, df):
-        features = dict()
-        df = df.sort_values("order").reset_index(drop=True)
-        for idx, sub_df in tqdm(df.groupby("id"), desc="Get features"):
-            features[idx] = dict()
-
-            total_md = sub_df[sub_df.cell_type == "markdown"].shape[0]
-            code_sub_df = sub_df[sub_df.cell_type == "code"]
-            total_code = code_sub_df.shape[0]
-
-            codes = self._sample_cells(
-                code_sub_df.source.tolist(), self.num_selected_code_cells
-            )
-
-            features[idx]["total_code"] = total_code
-            features[idx]["total_md"] = total_md
-            features[idx]["codes"] = codes
-        return features
+        return pd.DataFrame(triplets, columns=["cell_id", "cid", "label"])
 
 
 def main():
@@ -222,7 +190,7 @@ def main():
     parser.add_argument("--output", type=str)
     parser.add_argument("--task", type=str)
     parser.add_argument("--mode", type=str)
-    
+
     # XGBRanker needed
     parser.add_argument("--tfidf_idf_path", type=str)
     parser.add_argument("--tfidf_voc_path", type=str)
@@ -248,9 +216,7 @@ def main():
         dataset = TransformersFeaturizer(
             args.data,
             args.output,
-            args.features_out_path,
             args.processed_out_path,
-            args.num_selected_code_cells,
             logger=logger,
         )
 
