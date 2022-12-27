@@ -2,12 +2,14 @@ import os
 
 import json
 import argparse
+import logging
 
 import pandas as pd
 
 from pathlib import Path
 from tqdm import tqdm
 
+from .config import Config
 
 def read_notebook(glob_path):
     return (
@@ -100,19 +102,26 @@ def main():
     parser.add_argument("--mode", type=str)
     parser.add_argument("--data", type=str)
     parser.add_argument("--output", type=str)
+    parser.add_argument("--config", type=str)
 
     parser.add_argument("--train_orders", type=str)
     parser.add_argument("--train_ancestors", type=str)
-    parser.add_argument("--num_notebooks", type=int, default=None)
+    
 
     args = parser.parse_args()
     
+    logger = logging.getLogger(__name__)
+    logger.info("--MERGING--")
+
+    config = Config()
+    config.load_config(args.config, logger)
+
     # Get the list of json files
     notebooks_jsons = os.listdir(args.data)
     print(f"There are {len(notebooks_jsons)} notebooks json files")
 
     if args.mode == "train":
-        all_results = merge_train(args.data, args.train_orders, args.train_ancestors, args.num_notebooks)
+        all_results = merge_train(args.data, args.train_orders, args.train_ancestors, config.num_notebooks)
     elif args.mode == "test":
         all_results = merge_test(args.data)
 

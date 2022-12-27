@@ -6,23 +6,15 @@ import pandas as pd
 from transformers import AutoModel, AutoTokenizer
 from torch.utils.data import Dataset
 
-class XGBrankerDataSet:
-    def __init__(self, data_path):
-        self.data_path = data_path
-
-    def load_data(self):
-        with open(self.data_path, "rb") as input_file:
-            X_train, y_train, groups = pickle.load(input_file)
-        return X_train, y_train, groups
 
 
 class TransformersDataset(Dataset):
-    def __init__(self, data_path, model_name_or_path, total_max_len, md_max_len, data_fts_path):
+    def __init__(self, data_path, data_fts_path, config):
         super().__init__()
         self.data_path = data_path
-        self.md_max_len = md_max_len
-        self.total_max_len = total_max_len  # maxlen allowed by model config
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
+        self.md_max_len = config.md_max_len
+        self.total_max_len = config.total_max_len  # maxlen allowed by model config
+        self.tokenizer = AutoTokenizer.from_pretrained(config.model_name_or_path)
         self.data_fts_path = data_fts_path
     
     def load_data(self):

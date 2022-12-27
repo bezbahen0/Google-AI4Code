@@ -9,9 +9,6 @@ pyarrow
 fastparquet
 sklearn
 pandarallel
-xgboost
-tensorflow
-torch
 transformers
 sentencepiece
 sacremoses

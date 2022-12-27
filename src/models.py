@@ -2,8 +2,6 @@ import os
 
 import fasttext
 
-from xgboost import XGBRanker
-
 import ctranslate2
 
 import torch
@@ -70,16 +68,6 @@ class LanguageIdentification:
         predictions = self.model.predict(text, k=1)  # returns top 1 matching languages
         return predictions
 
-
-class XGBrankerModel:
-    def __init__(self):
-        self.model = XGBRanker(
-            min_child_weight=10,
-            subsample=0.5,
-            tree_method="hist",
-            verbosity=2,
-            n_jobs=os.cpu_count(),
-        )
 
 
 if __name__ == "__main__":
